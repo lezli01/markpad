@@ -23,4 +23,4 @@ dist-ssr
 *.sln
 *.sw?
 
-.claude\settings.local.json
+.claude/settings.local.json
