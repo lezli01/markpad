@@ -1,0 +1,33 @@
+# AI Development Rules for MILF
+
+## Project
+
+MILF stands for Markdown Interface & Live Formatter.
+
+## Principles
+
+- Prefer simple, readable code.
+- Keep features small and reviewable.
+- Avoid premature abstractions.
+- Do not add dependencies without justification.
+- Every meaningful feature should begin with an issue or spec.
+- Favor contributor-friendly architecture.
+
+## Stack
+
+- Tauri 2
+- React
+- TypeScript
+- Vite
+- CodeMirror 6
+- markdown-it
+- Tailwind CSS
+
+## Development Workflow
+
+1. Create an issue.
+2. Write acceptance criteria.
+3. Ask AI for an implementation plan.
+4. Implement in small commits.
+5. Open a PR, even when working solo.
+6. Merge only after CI passes.
