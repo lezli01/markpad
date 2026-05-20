@@ -5,6 +5,11 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    commit-message:
+      prefix: chore
+      include: scope
     groups:
       react:
         patterns:
@@ -25,6 +30,11 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    commit-message:
+      prefix: chore
+      include: scope
     groups:
       tauri:
         patterns:
@@ -37,3 +47,9 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - ci
+    commit-message:
+      prefix: ci
+      include: scope

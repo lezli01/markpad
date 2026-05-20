@@ -1,7 +1,17 @@
 {
   "name": "milf",
   "private": true,
+  "description": "Markdown Interface & Live Formatter",
   "version": "0.1.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lezli01/milf.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lezli01/milf/issues"
+  },
+  "homepage": "https://github.com/lezli01/milf#readme",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -22,8 +22,11 @@ Closes #
 
 <!-- How did you verify this works? Include commands run and platforms tested. -->
 
+- [ ] `npm run lint` passes
 - [ ] `npm run build` passes
-- [ ] `cargo clippy -- -D warnings` passes (in `src-tauri/`)
+- [ ] `cargo fmt --all --check` passes (in `src-tauri/`)
+- [ ] `cargo clippy --all-targets --all-features -- -D warnings` passes (in `src-tauri/`)
+- [ ] `cargo check --all-targets --all-features` passes (in `src-tauri/`)
 - [ ] Manually exercised in `npm run tauri dev` on:
   - [ ] Windows
   - [ ] macOS

@@ -1,0 +1,61 @@
+name: Bug report
+description: Report something that is broken or behaving unexpectedly.
+title: "fix: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks for helping improve MILF. Please include enough detail for someone else to reproduce the issue."
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the smallest set of steps that triggers the problem.
+      placeholder: |
+        1. Open the app
+        2. Type ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead?
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: Operating system and version.
+      placeholder: "Windows 11, macOS 15, Ubuntu 24.04"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: App version, release tag, or commit SHA.
+      placeholder: "v0.1.0 or commit SHA"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Add relevant logs, screenshots, or recordings.
+

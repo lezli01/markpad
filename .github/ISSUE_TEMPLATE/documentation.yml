@@ -1,0 +1,30 @@
+name: Documentation
+description: Improve README, guides, architecture notes, specs, or contributor docs.
+title: "docs: "
+labels:
+  - documentation
+body:
+  - type: textarea
+    id: location
+    attributes:
+      label: Documentation location
+      description: Which file, page, or topic needs work?
+    validations:
+      required: true
+  - type: textarea
+    id: issue
+    attributes:
+      label: What should improve?
+      description: Describe what is missing, unclear, outdated, or incorrect.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
