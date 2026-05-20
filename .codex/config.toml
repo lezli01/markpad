@@ -1,0 +1,3 @@
+[mcp_servers.github-github-mcp-server]
+args = ["github-mcp-server"]
+command = "uvx"

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "github-github-mcp-server": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "github-mcp-server"
+      ],
+      "env": {}
+    }
+  }
+}

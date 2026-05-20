@@ -1,0 +1,6 @@
+# Default owner for everything in the repo.
+# Pull requests will request a review from these owners automatically.
+* @lezli01
+
+# CI / release / security workflows
+/.github/ @lezli01
