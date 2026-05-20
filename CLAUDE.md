@@ -31,3 +31,8 @@ MILF stands for Markdown Interface & Live Formatter.
 4. Implement in small commits.
 5. Open a PR, even when working solo.
 6. Merge only after CI passes.
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->
