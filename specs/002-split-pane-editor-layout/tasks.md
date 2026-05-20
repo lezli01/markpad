@@ -33,14 +33,14 @@ Single-project Tauri + React layout (per `plan.md` "Project Structure"):
 
 **Purpose**: Install dependencies, wire Tailwind v4 into Vite, and clear the Tauri starter boilerplate so subsequent phases build on a clean canvas.
 
-- [ ] T001 Install runtime dependencies in [package.json](package.json): `npm install codemirror@^6 @codemirror/state@^6 @codemirror/view@^6 @codemirror/lang-markdown@^6 @codemirror/commands@^6 markdown-it@^14 dompurify@^3`
-- [ ] T002 Install dev dependencies in [package.json](package.json): `npm install -D tailwindcss@^4 @tailwindcss/vite@^4 @types/markdown-it @types/dompurify`
-- [ ] T003 Register the Tailwind v4 plugin in [vite.config.ts](vite.config.ts) — import `tailwindcss from "@tailwindcss/vite"` and add it to the `plugins` array alongside `react()`
-- [ ] T004 Create [src/styles.css](src/styles.css) containing `@import "tailwindcss";` plus CSS custom properties for the "islands" palette (background gradient stops, surface, ring, muted text) so CodeMirror's theme and component utilities share one source of truth (per `research.md` §3, §5)
-- [ ] T005 Update [src/main.tsx](src/main.tsx) to `import "./styles.css"` (replacing any existing CSS import indirectly pulled from `App.tsx`)
-- [ ] T006 [P] Delete [src/App.css](src/App.css) — its starter styles conflict with Tailwind's reset and are no longer referenced after T005
-- [ ] T007 [P] Update the `<title>` in [index.html](index.html) from `Tauri + React + Typescript` to `MILF`, and remove the `/vite.svg` favicon `<link>` so no Vite branding ships in the chrome
-- [ ] T008 [P] Prune unused Tauri starter logos: delete [src/assets/react.svg](src/assets/react.svg), [public/tauri.svg](public/tauri.svg), and [public/vite.svg](public/vite.svg)
+- [X] T001 Install runtime dependencies in [package.json](package.json): `npm install codemirror@^6 @codemirror/state@^6 @codemirror/view@^6 @codemirror/lang-markdown@^6 @codemirror/commands@^6 markdown-it@^14 dompurify@^3`
+- [X] T002 Install dev dependencies in [package.json](package.json): `npm install -D tailwindcss@^4 @tailwindcss/vite@^4 @types/markdown-it @types/dompurify`
+- [X] T003 Register the Tailwind v4 plugin in [vite.config.ts](vite.config.ts) — import `tailwindcss from "@tailwindcss/vite"` and add it to the `plugins` array alongside `react()`
+- [X] T004 Create [src/styles.css](src/styles.css) containing `@import "tailwindcss";` plus CSS custom properties for the "islands" palette (background gradient stops, surface, ring, muted text) so CodeMirror's theme and component utilities share one source of truth (per `research.md` §3, §5)
+- [X] T005 Update [src/main.tsx](src/main.tsx) to `import "./styles.css"` (replacing any existing CSS import indirectly pulled from `App.tsx`)
+- [X] T006 [P] Delete [src/App.css](src/App.css) — its starter styles conflict with Tailwind's reset and are no longer referenced after T005
+- [X] T007 [P] Update the `<title>` in [index.html](index.html) from `Tauri + React + Typescript` to `MILF`, and remove the `/vite.svg` favicon `<link>` so no Vite branding ships in the chrome
+- [X] T008 [P] Prune unused Tauri starter logos: delete [src/assets/react.svg](src/assets/react.svg), [public/tauri.svg](public/tauri.svg), and [public/vite.svg](public/vite.svg)
 
 ---
 
@@ -50,7 +50,7 @@ Single-project Tauri + React layout (per `plan.md` "Project Structure"):
 
 **⚠️ CRITICAL**: No user-story work can begin until this phase is complete.
 
-- [ ] T009 Replace [src/App.tsx](src/App.tsx) with a minimal placeholder that removes the `useState<greetMsg>` / `useState<name>`, the `invoke("greet", ...)` call, the React/Tauri/Vite logos, and the greet form. The new body should render a single root `<div className="h-screen w-screen" />` (or equivalent) so the window is blank and ready for `<Workspace>` to land in US1.
+- [X] T009 Replace [src/App.tsx](src/App.tsx) with a minimal placeholder that removes the `useState<greetMsg>` / `useState<name>`, the `invoke("greet", ...)` call, the React/Tauri/Vite logos, and the greet form. The new body should render a single root `<div className="h-screen w-screen" />` (or equivalent) so the window is blank and ready for `<Workspace>` to land in US1.
 
 **Checkpoint**: Foundation ready — user story phases can now proceed.
 
@@ -64,11 +64,11 @@ Single-project Tauri + React layout (per `plan.md` "Project Structure"):
 
 ### Implementation for User Story 1
 
-- [ ] T010 [P] [US1] Create [src/lib/markdown.ts](src/lib/markdown.ts) exporting `renderMarkdown(source: string): string`. Use a module-scoped `markdown-it` instance configured with `{ html: false, linkify: true, typographer: true, breaks: false }`, render `source`, then pass the HTML through `DOMPurify.sanitize(...)` before returning. This module must be the ONLY place that imports `markdown-it` or `dompurify` (per `contracts/components.md` and Constitution VII).
-- [ ] T011 [P] [US1] Create [src/components/Editor.tsx](src/components/Editor.tsx) — a controlled `(value, onChange)` React component that mounts a CodeMirror 6 `EditorView` into a `useRef<HTMLDivElement>` on first render. Configure: `markdown()` language, `EditorView.lineWrapping`, history + default keymap from `@codemirror/commands`, and an "islands" `EditorView.theme(...)` referencing the CSS variables defined in [src/styles.css](src/styles.css). Subscribe to doc changes via `EditorView.updateListener` and call `onChange(view.state.doc.toString())` only when the doc actually changed. When the `value` prop changes from outside and differs from the editor doc, dispatch a transaction to replace the doc (guarded to avoid feedback loops). Tear down the `EditorView` on unmount.
-- [ ] T012 [P] [US1] Create [src/components/Preview.tsx](src/components/Preview.tsx) — accepts `{ markdown: string }`, computes `const html = useMemo(() => renderMarkdown(markdown), [markdown])`, renders `<div dangerouslySetInnerHTML={{ __html: html }} />` with hand-tuned typography utility classes (headings, lists, code, links). When `markdown === ""`, render a low-contrast hint (`"Preview will appear here."`) instead so the empty state is obviously empty rather than broken (FR-002 / Acceptance Scenario 4).
-- [ ] T013 [US1] Create [src/components/Workspace.tsx](src/components/Workspace.tsx) — accepts `{ text: string; onTextChange: (next: string) => void }`. Render a full-viewport (`h-screen w-screen`) container with the islands background gradient, holding two sibling card `<section>`s, each `rounded-2xl bg-white/80 dark:bg-slate-800/60 ring-1 ring-black/5 shadow-sm backdrop-blur` with a small `text-xs uppercase tracking-wide text-slate-500` label ("Editor" left, "Preview" right). Render `<Editor value={text} onChange={onTextChange} />` in the left card and `<Preview markdown={text} />` in the right card. Workspace MUST NOT import `markdown-it`/`dompurify`/`@codemirror/*` directly (per `contracts/components.md`). For this story the outer flex can be plain `flex flex-row gap-4 p-4` — responsive behavior is added in US2. Depends on T011, T012.
-- [ ] T014 [US1] Update [src/App.tsx](src/App.tsx) to own the single `Document.text` state: `const [text, setText] = useState("")`, then render `<Workspace text={text} onTextChange={setText} />`. Remove the placeholder root `<div>` left over from T009. Depends on T013.
+- [X] T010 [P] [US1] Create [src/lib/markdown.ts](src/lib/markdown.ts) exporting `renderMarkdown(source: string): string`. Use a module-scoped `markdown-it` instance configured with `{ html: false, linkify: true, typographer: true, breaks: false }`, render `source`, then pass the HTML through `DOMPurify.sanitize(...)` before returning. This module must be the ONLY place that imports `markdown-it` or `dompurify` (per `contracts/components.md` and Constitution VII).
+- [X] T011 [P] [US1] Create [src/components/Editor.tsx](src/components/Editor.tsx) — a controlled `(value, onChange)` React component that mounts a CodeMirror 6 `EditorView` into a `useRef<HTMLDivElement>` on first render. Configure: `markdown()` language, `EditorView.lineWrapping`, history + default keymap from `@codemirror/commands`, and an "islands" `EditorView.theme(...)` referencing the CSS variables defined in [src/styles.css](src/styles.css). Subscribe to doc changes via `EditorView.updateListener` and call `onChange(view.state.doc.toString())` only when the doc actually changed. When the `value` prop changes from outside and differs from the editor doc, dispatch a transaction to replace the doc (guarded to avoid feedback loops). Tear down the `EditorView` on unmount.
+- [X] T012 [P] [US1] Create [src/components/Preview.tsx](src/components/Preview.tsx) — accepts `{ markdown: string }`, computes `const html = useMemo(() => renderMarkdown(markdown), [markdown])`, renders `<div dangerouslySetInnerHTML={{ __html: html }} />` with hand-tuned typography utility classes (headings, lists, code, links). When `markdown === ""`, render a low-contrast hint (`"Preview will appear here."`) instead so the empty state is obviously empty rather than broken (FR-002 / Acceptance Scenario 4).
+- [X] T013 [US1] Create [src/components/Workspace.tsx](src/components/Workspace.tsx) — accepts `{ text: string; onTextChange: (next: string) => void }`. Render a full-viewport (`h-screen w-screen`) container with the islands background gradient, holding two sibling card `<section>`s, each `rounded-2xl bg-white/80 dark:bg-slate-800/60 ring-1 ring-black/5 shadow-sm backdrop-blur` with a small `text-xs uppercase tracking-wide text-slate-500` label ("Editor" left, "Preview" right). Render `<Editor value={text} onChange={onTextChange} />` in the left card and `<Preview markdown={text} />` in the right card. Workspace MUST NOT import `markdown-it`/`dompurify`/`@codemirror/*` directly (per `contracts/components.md`). For this story the outer flex can be plain `flex flex-row gap-4 p-4` — responsive behavior is added in US2. Depends on T011, T012.
+- [X] T014 [US1] Update [src/App.tsx](src/App.tsx) to own the single `Document.text` state: `const [text, setText] = useState("")`, then render `<Workspace text={text} onTextChange={setText} />`. Remove the placeholder root `<div>` left over from T009. Depends on T013.
 
 **Checkpoint**: User Story 1 is fully functional and independently testable at desktop window sizes — manual quickstart steps 1, 2, and 3 should pass.
 
@@ -82,9 +82,9 @@ Single-project Tauri + React layout (per `plan.md` "Project Structure"):
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Update [src/components/Workspace.tsx](src/components/Workspace.tsx) outer flex container to `flex flex-col md:flex-row gap-4 p-4 md:p-6` so the panes stack vertically below the Tailwind `md` (768 px) breakpoint and sit side-by-side at and above it (per `research.md` §4)
-- [ ] T016 [US2] Update [src/components/Workspace.tsx](src/components/Workspace.tsx) pane cards to `flex-1 min-w-0 min-h-0 overflow-hidden min-h-[200px]` so each card can shrink within a flex parent (the `min-*-0` reset is required for children that contain `overflow-auto` content), grows to fill available space, and stays at a usable height when stacked at narrow widths (FR-010)
-- [ ] T017 [P] [US2] Update [src/components/Preview.tsx](src/components/Preview.tsx) outer container to `h-full overflow-auto` so the preview pane scrolls independently of the editor (FR-008). CodeMirror's own `cm-scroller` already handles editor-side scrolling.
+- [X] T015 [US2] Update [src/components/Workspace.tsx](src/components/Workspace.tsx) outer flex container to `flex flex-col md:flex-row gap-4 p-4 md:p-6` so the panes stack vertically below the Tailwind `md` (768 px) breakpoint and sit side-by-side at and above it (per `research.md` §4)
+- [X] T016 [US2] Update [src/components/Workspace.tsx](src/components/Workspace.tsx) pane cards to `flex-1 min-w-0 min-h-0 overflow-hidden min-h-[200px]` so each card can shrink within a flex parent (the `min-*-0` reset is required for children that contain `overflow-auto` content), grows to fill available space, and stays at a usable height when stacked at narrow widths (FR-010)
+- [X] T017 [P] [US2] Update [src/components/Preview.tsx](src/components/Preview.tsx) outer container to `h-full overflow-auto` so the preview pane scrolls independently of the editor (FR-008). CodeMirror's own `cm-scroller` already handles editor-side scrolling.
 
 **Checkpoint**: User Stories 1 AND 2 both work — quickstart steps 4 and 5 should pass alongside 1–3.
 
@@ -98,8 +98,8 @@ Single-project Tauri + React layout (per `plan.md` "Project Structure"):
 
 ### Implementation for User Story 3
 
-- [ ] T018 [US3] Create [src/lib/starterContent.ts](src/lib/starterContent.ts) exporting `export const starterContent: string` — a short multi-line markdown sample (under ~30 lines per `research.md` §6) that introduces MILF in one sentence and demonstrates a heading, bold, italic, an unordered list, a link, and an inline code span, ending with a friendly call-to-action like "Try editing this text — the preview updates as you type."
-- [ ] T019 [US3] Update [src/App.tsx](src/App.tsx) to `import { starterContent } from "./lib/starterContent"` and initialize state with it: `const [text, setText] = useState(starterContent)`. Depends on T018.
+- [X] T018 [US3] Create [src/lib/starterContent.ts](src/lib/starterContent.ts) exporting `export const starterContent: string` — a short multi-line markdown sample (under ~30 lines per `research.md` §6) that introduces MILF in one sentence and demonstrates a heading, bold, italic, an unordered list, a link, and an inline code span, ending with a friendly call-to-action like "Try editing this text — the preview updates as you type."
+- [X] T019 [US3] Update [src/App.tsx](src/App.tsx) to `import { starterContent } from "./lib/starterContent"` and initialize state with it: `const [text, setText] = useState(starterContent)`. Depends on T018.
 
 **Checkpoint**: All three user stories are independently functional. Quickstart step 1 ("starter markdown is in the Editor; the Preview shows it rendered…") now passes alongside everything from US1 and US2.
 
@@ -109,12 +109,12 @@ Single-project Tauri + React layout (per `plan.md` "Project Structure"):
 
 **Purpose**: Verify the constitution gates, confirm the manual acceptance walkthrough end-to-end, and tidy the desktop shell.
 
-- [ ] T020 [P] Tweak the default Tauri window in [src-tauri/tauri.conf.json](src-tauri/tauri.conf.json) — set the main window `title` to `"MILF"` and a reasonable default size (e.g., `width: 1200`, `height: 800`) so first launch lands at a comfortable desktop size
-- [ ] T021 Run `npm run build` from the repo root and confirm zero TypeScript errors and a reasonable production bundle size (Constitution Principle IX — `tsc` gate)
-- [ ] T022 [P] Manually walk through [specs/002-split-pane-editor-layout/quickstart.md](specs/002-split-pane-editor-layout/quickstart.md) steps 1–5 (initial render, live preview, empty state, responsive resize from ~1200 px → ~480 px → back, independent scroll with a long pasted document)
-- [ ] T023 [P] Manually walk through [specs/002-split-pane-editor-layout/quickstart.md](specs/002-split-pane-editor-layout/quickstart.md) step 6 (sanitizer check): paste `<script>alert('xss')</script>`, `<img src="x" onerror="alert('xss')" />`, and `[click me](javascript:alert('xss'))` into the editor and confirm no alert fires, the script tag is inert, the `onerror` attribute is stripped, and the `javascript:` URL is neutralized — proves Constitution VII is enforced via [src/lib/markdown.ts](src/lib/markdown.ts)
-- [ ] T024 [P] Manually walk through [specs/002-split-pane-editor-layout/quickstart.md](specs/002-split-pane-editor-layout/quickstart.md) step 7 (color scheme): toggle the OS color scheme between Light and Dark and confirm both panes' palettes flip automatically without a reload
-- [ ] T025 [P] Grep the repo to confirm no module other than [src/lib/markdown.ts](src/lib/markdown.ts) imports `markdown-it` or `dompurify` — this is a structural check that Principle VII can't be bypassed by future contributors
+- [X] T020 [P] Tweak the default Tauri window in [src-tauri/tauri.conf.json](src-tauri/tauri.conf.json) — set the main window `title` to `"MILF"` and a reasonable default size (e.g., `width: 1200`, `height: 800`) so first launch lands at a comfortable desktop size
+- [X] T021 Run `npm run build` from the repo root and confirm zero TypeScript errors and a reasonable production bundle size (Constitution Principle IX — `tsc` gate)
+- [X] T022 [P] Manually walk through [specs/002-split-pane-editor-layout/quickstart.md](specs/002-split-pane-editor-layout/quickstart.md) steps 1–5 (initial render, live preview, empty state, responsive resize from ~1200 px → ~480 px → back, independent scroll with a long pasted document)
+- [X] T023 [P] Manually walk through [specs/002-split-pane-editor-layout/quickstart.md](specs/002-split-pane-editor-layout/quickstart.md) step 6 (sanitizer check): paste `<script>alert('xss')</script>`, `<img src="x" onerror="alert('xss')" />`, and `[click me](javascript:alert('xss'))` into the editor and confirm no alert fires, the script tag is inert, the `onerror` attribute is stripped, and the `javascript:` URL is neutralized — proves Constitution VII is enforced via [src/lib/markdown.ts](src/lib/markdown.ts)
+- [X] T024 [P] Manually walk through [specs/002-split-pane-editor-layout/quickstart.md](specs/002-split-pane-editor-layout/quickstart.md) step 7 (color scheme): toggle the OS color scheme between Light and Dark and confirm both panes' palettes flip automatically without a reload
+- [X] T025 [P] Grep the repo to confirm no module other than [src/lib/markdown.ts](src/lib/markdown.ts) imports `markdown-it` or `dompurify` — this is a structural check that Principle VII can't be bypassed by future contributors
 
 ---
 

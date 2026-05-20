@@ -1,0 +1,185 @@
+@import "tailwindcss";
+
+/*
+  Islands palette — shared between Tailwind utility usage and the CodeMirror
+  EditorView.theme(...) in src/components/Editor.tsx so both sides of the
+  workspace draw from the same source of truth (per research.md §3, §5).
+  Values mirror Tailwind's slate / indigo scales.
+*/
+:root {
+  --islands-bg-from: #f8fafc; /* slate-50 */
+  --islands-bg-to: #f1f5f9; /* slate-100 */
+  --islands-surface: rgb(255 255 255 / 0.8);
+  --islands-ring: rgb(0 0 0 / 0.05);
+  --islands-text: #0f172a; /* slate-900 */
+  --islands-muted: #64748b; /* slate-500 */
+  --islands-selection: #c7d2fe; /* indigo-200 */
+  --islands-cursor: #6366f1; /* indigo-500 */
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --islands-bg-from: #0f172a; /* slate-900 */
+    --islands-bg-to: #020617; /* slate-950 */
+    --islands-surface: rgb(30 41 59 / 0.6); /* slate-800 / 60% */
+    --islands-ring: rgb(255 255 255 / 0.08);
+    --islands-text: #f1f5f9; /* slate-100 */
+    --islands-muted: #94a3b8; /* slate-400 */
+    --islands-selection: rgb(99 102 241 / 0.35); /* indigo-500 / 35% */
+    --islands-cursor: #a5b4fc; /* indigo-300 */
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+  color: var(--islands-text);
+}
+
+/* Hand-tuned typography for the rendered markdown in <Preview />.
+   markdown-it emits standard tags (h1-h6, p, ul/ol/li, a, code, pre,
+   blockquote, hr, table, img); we style them via descendant selectors
+   so contributors don't have to inject classes into generated HTML. */
+.milf-preview {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
+.milf-preview > :first-child {
+  margin-top: 0;
+}
+
+.milf-preview > :last-child {
+  margin-bottom: 0;
+}
+
+.milf-preview h1,
+.milf-preview h2,
+.milf-preview h3,
+.milf-preview h4,
+.milf-preview h5,
+.milf-preview h6 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.5rem 0 0.75rem;
+}
+
+.milf-preview h1 {
+  font-size: 1.75rem;
+}
+.milf-preview h2 {
+  font-size: 1.4rem;
+}
+.milf-preview h3 {
+  font-size: 1.2rem;
+}
+.milf-preview h4 {
+  font-size: 1.05rem;
+}
+.milf-preview h5,
+.milf-preview h6 {
+  font-size: 1rem;
+  color: var(--islands-muted);
+}
+
+.milf-preview p {
+  margin: 0.75rem 0;
+}
+
+.milf-preview a {
+  color: var(--islands-cursor);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.milf-preview a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.milf-preview ul,
+.milf-preview ol {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+
+.milf-preview ul {
+  list-style: disc;
+}
+
+.milf-preview ol {
+  list-style: decimal;
+}
+
+.milf-preview li {
+  margin: 0.25rem 0;
+}
+
+.milf-preview code {
+  font-family:
+    ui-monospace, "SF Mono", Monaco, Menlo, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 0.85em;
+  padding: 0.1em 0.35em;
+  border-radius: 0.25rem;
+  background: var(--islands-ring);
+}
+
+.milf-preview pre {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--islands-ring);
+  overflow-x: auto;
+}
+
+.milf-preview pre code {
+  padding: 0;
+  background: transparent;
+  font-size: 0.85em;
+}
+
+.milf-preview blockquote {
+  margin: 0.75rem 0;
+  padding: 0.25rem 0 0.25rem 0.75rem;
+  border-left: 3px solid var(--islands-muted);
+  color: var(--islands-muted);
+  font-style: italic;
+}
+
+.milf-preview hr {
+  margin: 1.25rem 0;
+  border: none;
+  border-top: 1px solid var(--islands-ring);
+}
+
+.milf-preview table {
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.9em;
+}
+
+.milf-preview th,
+.milf-preview td {
+  border: 1px solid var(--islands-ring);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+
+.milf-preview img {
+  max-width: 100%;
+  height: auto;
+}
