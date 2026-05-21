@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!--
+    MILF app icon — a rounded indigo tile with "MI" / "LF" stacked.
+    Letters are encoded as SVG paths (not <text>) so resvg/tauri-icon
+    rasterizes them without needing a system font.
+  -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#4338ca"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="200" ry="200" fill="url(#bg)"/>
+
+  <g fill="#ffffff">
+    <!-- Top row: MI -->
+    <g transform="translate(169 90) scale(1.4)">
+      <!-- M (200 wide x 280 tall) -->
+      <path d="M0,280 V0 H50 L100,130 L150,0 H200 V280 H150 V90 L115,200 H85 L50,90 V280 Z"/>
+      <!-- I with slab serifs (240 wide x 280 tall), offset by M+gap -->
+      <g transform="translate(250 0)">
+        <path d="M0,0 H240 V50 H150 V230 H240 V280 H0 V230 H90 V50 H0 Z"/>
+      </g>
+    </g>
+
+    <!-- Bottom row: LF -->
+    <g transform="translate(197 542) scale(1.4)">
+      <!-- L (200 wide x 280 tall) -->
+      <path d="M0,0 H50 V230 H200 V280 H0 Z"/>
+      <!-- F (200 wide x 280 tall), offset by L+gap -->
+      <g transform="translate(250 0)">
+        <path d="M0,0 H200 V50 H50 V115 H160 V165 H50 V280 H0 Z"/>
+      </g>
+    </g>
+  </g>
+</svg>

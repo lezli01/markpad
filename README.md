@@ -1,5 +1,9 @@
 # MILF
 
+<p align="center">
+  <img src="public/favicon.svg" alt="MILF icon" width="128" height="128" />
+</p>
+
 **Markdown Interface & Live Formatter**
 
 MILF is a lightweight, cross-platform Markdown viewer and editor for Windows, Linux, and macOS.

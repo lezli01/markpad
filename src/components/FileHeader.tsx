@@ -12,23 +12,19 @@ export default function FileHeader({
   fullPath,
   isModified,
 }: FileHeaderProps) {
-  if (fileName === null) {
-    return (
-      <header
-        className={headerShell}
-        role="status"
-        aria-live="polite"
-      >
-        {isModified && <span aria-label="modified">* </span>}
-        <span title="No file open">Untitled</span>
-      </header>
-    );
-  }
+  const displayName = fileName ?? "Untitled";
+  const hoverTitle = fullPath ?? fileName ?? "No file open";
   return (
     <header className={headerShell} role="status" aria-live="polite">
+      <img
+        src="/favicon.svg"
+        alt=""
+        aria-hidden="true"
+        className="h-6 w-6 flex-shrink-0"
+      />
       {isModified && <span aria-label="modified">* </span>}
-      <span className="truncate" title={fullPath ?? fileName}>
-        {fileName}
+      <span className="truncate" title={hoverTitle}>
+        {displayName}
       </span>
     </header>
   );
