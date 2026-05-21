@@ -4,6 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MILF</title>
+    <script>
+      // Pre-React theme bootstrap — prevents a flash of the wrong theme on
+      // first paint. Intentionally duplicates the first-launch resolution
+      // logic from src/lib/preferences.ts because that module cannot load
+      // before React mounts. Keep the two in sync.
+      (function () {
+        try {
+          var stored = localStorage.getItem("milf.theme");
+          var theme =
+            stored === "light" || stored === "dark"
+              ? stored
+              : window.matchMedia &&
+                  window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light";
+          document.documentElement.dataset.theme = theme;
+        } catch (e) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
   </head>
 
   <body>
