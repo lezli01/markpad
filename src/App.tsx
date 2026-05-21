@@ -139,6 +139,36 @@ function App() {
     persistAutoSave(next);
   }
 
+  const handleSaveRef = useRef(handleSave);
+  const handleNewFileRef = useRef(handleNewFile);
+  const handleOpenFileRef = useRef(handleOpenFile);
+
+  useEffect(() => {
+    handleSaveRef.current = handleSave;
+    handleNewFileRef.current = handleNewFile;
+    handleOpenFileRef.current = handleOpenFile;
+  });
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const mod = e.ctrlKey || e.metaKey;
+      if (!mod || e.shiftKey || e.altKey) return;
+      const key = e.key.toLowerCase();
+      if (key === "s") {
+        e.preventDefault();
+        handleSaveRef.current();
+      } else if (key === "n") {
+        e.preventDefault();
+        handleNewFileRef.current();
+      } else if (key === "o") {
+        e.preventDefault();
+        void handleOpenFileRef.current();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   const isModified = text !== savedText;
   const saveEnabled = !saving;
 
