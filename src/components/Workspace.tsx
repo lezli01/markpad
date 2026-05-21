@@ -1,11 +1,14 @@
-import Editor from "./Editor";
-import Preview from "./Preview";
+import type { Ref } from "react";
+import Editor, { type EditorHandle } from "./Editor";
+import Preview, { type PreviewHandle } from "./Preview";
 import type { ViewMode } from "../lib/preferences";
 
 type WorkspaceProps = {
   text: string;
   viewMode: ViewMode;
   onTextChange: (next: string) => void;
+  editorRef?: Ref<EditorHandle>;
+  previewRef?: Ref<PreviewHandle>;
 };
 
 const islandCard =
@@ -18,6 +21,8 @@ export default function Workspace({
   text,
   viewMode,
   onTextChange,
+  editorRef,
+  previewRef,
 }: WorkspaceProps) {
   // Editor MUST stay mounted across every view-mode switch so CodeMirror's
   // selection, cursor, and undo history survive (per research.md §3, FR-012).
@@ -40,14 +45,14 @@ export default function Workspace({
       >
         <div className={islandLabel}>Editor</div>
         <div className="flex-1 min-h-0 px-4 pb-4">
-          <Editor value={text} onChange={onTextChange} />
+          <Editor ref={editorRef} value={text} onChange={onTextChange} />
         </div>
       </section>
       {previewMounted && (
         <section className={islandCard} aria-label="Preview">
           <div className={islandLabel}>Preview</div>
           <div className="flex-1 min-h-0">
-            <Preview markdown={text} />
+            <Preview ref={previewRef} markdown={text} />
           </div>
         </section>
       )}

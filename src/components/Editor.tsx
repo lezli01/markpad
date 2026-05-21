@@ -1,8 +1,15 @@
-import { useEffect, useRef } from "react";
-import { EditorState } from "@codemirror/state";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { EditorState, type StateEffect } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
+
+export type EditorHandle = {
+  getState(): EditorState;
+  setState(state: EditorState): void;
+  getScrollSnapshot(): StateEffect<unknown>;
+  applyScrollSnapshot(effect: StateEffect<unknown>): void;
+};
 
 type EditorProps = {
   value: string;
@@ -42,7 +49,10 @@ const islandsTheme = EditorView.theme({
   },
 });
 
-export default function Editor({ value, onChange }: EditorProps) {
+const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
+  { value, onChange },
+  ref,
+) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
@@ -50,6 +60,18 @@ export default function Editor({ value, onChange }: EditorProps) {
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      getState: () => viewRef.current!.state,
+      setState: (state) => viewRef.current!.setState(state),
+      getScrollSnapshot: () => viewRef.current!.scrollSnapshot(),
+      applyScrollSnapshot: (effect) =>
+        viewRef.current!.dispatch({ effects: effect }),
+    }),
+    [],
+  );
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -94,4 +116,8 @@ export default function Editor({ value, onChange }: EditorProps) {
   }, [value]);
 
   return <div ref={containerRef} className="h-full w-full" />;
-}
+});
+
+Editor.displayName = "Editor";
+
+export default Editor;

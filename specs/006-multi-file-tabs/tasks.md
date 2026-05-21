@@ -41,7 +41,7 @@ description: "Task list for Feature 006 — Multi-File Editing with Tabs"
 
 **CRITICAL**: T001 blocks US1's per-tab state preservation (FR-001's best-effort cursor and scroll requirement).
 
-- [ ] T001 Extend `src/components/Editor.tsx` with the `forwardRef` + `useImperativeHandle` API the App will use to snapshot and restore per-tab `EditorState` ([research.md](research.md) §3, [contracts/components.md](contracts/components.md#4-editor--updated--gains-an-imperative-api)):
+- [X] T001 Extend `src/components/Editor.tsx` with the `forwardRef` + `useImperativeHandle` API the App will use to snapshot and restore per-tab `EditorState` ([research.md](research.md) §3, [contracts/components.md](contracts/components.md#4-editor--updated--gains-an-imperative-api)):
   1. Add the imports: `import { forwardRef, useImperativeHandle } from "react";` (extend the existing `import { useEffect, useRef } from "react";` line). Add `import type { EditorState } from "@codemirror/state";` (the `EditorState` import is type-only — keep it `import type` to satisfy `verbatimModuleSyntax`).
   2. Export a new type alongside `EditorProps`: `export type EditorHandle = { getState(): EditorState; setState(state: EditorState): void; };`.
   3. Convert the existing `export default function Editor({ value, onChange }: EditorProps)` into a `forwardRef<EditorHandle, EditorProps>` wrapping the same body. Set `Editor.displayName = "Editor";` after the `forwardRef` call so React DevTools still shows a friendly name.
@@ -61,7 +61,7 @@ description: "Task list for Feature 006 — Multi-File Editing with Tabs"
 
 ### Implementation for User Story 1
 
-- [ ] T002 [P] [US1] Create `src/components/TabStrip.tsx` as a pure presentational component ([contracts/components.md](contracts/components.md#2-tabstrip--new), [research.md](research.md) §9, §10):
+- [X] T002 [P] [US1] Create `src/components/TabStrip.tsx` as a pure presentational component ([contracts/components.md](contracts/components.md#2-tabstrip--new), [research.md](research.md) §9, §10):
   1. Define the props type:
      ```ts
      import type { Tab, TabId } from "../App";
@@ -88,7 +88,7 @@ description: "Task list for Feature 006 — Multi-File Editing with Tabs"
   7. Component stays well under the Constitution's ~150-line ceiling (target ~80 lines including imports, SVG, and accessibility hooks).
   8. No state of its own beyond the refs map; no calls into `lib/*`; no Tauri imports. Pure presentation.
 
-- [ ] T003 [US1] Reshape `src/App.tsx` from "single document" to "tabs[] + activeTabId" ([data-model.md](data-model.md), [research.md](research.md) §1–§5, §7, §11, [contracts/components.md](contracts/components.md#1-apptsx-state-owner)). This is the largest task in the feature; sequencing the bullets below as listed makes the file type-check at each intermediate state, even though the natural commit is one logical unit.
+- [X] T003 [US1] Reshape `src/App.tsx` from "single document" to "tabs[] + activeTabId" ([data-model.md](data-model.md), [research.md](research.md) §1–§5, §7, §11, [contracts/components.md](contracts/components.md#1-apptsx-state-owner)). This is the largest task in the feature; sequencing the bullets below as listed makes the file type-check at each intermediate state, even though the natural commit is one logical unit.
 
   **Types and helpers**
 
@@ -292,7 +292,7 @@ description: "Task list for Feature 006 — Multi-File Editing with Tabs"
   28. Add `import TabStrip from "./components/TabStrip";`.
   29. Confirm no stale references to `text`, `savedText`, `openedFile`, `saving`, or `setText` remain anywhere in `App.tsx`. Search the file before closing the task.
 
-- [ ] T004 [P] [US1] Update `src/components/Workspace.tsx` to forward the editor ref ([contracts/components.md](contracts/components.md#5-workspace--unchanged-in-shape)):
+- [X] T004 [P] [US1] Update `src/components/Workspace.tsx` to forward the editor ref ([contracts/components.md](contracts/components.md#5-workspace--unchanged-in-shape)):
   1. Extend `WorkspaceProps` with `editorRef?: Ref<EditorHandle>`. Import `Ref` from React and `EditorHandle` from `./Editor`.
   2. Destructure `editorRef` from props in the component signature.
   3. Pass `ref={editorRef}` to the `<Editor />` element. The existing `value={text}` and `onChange={onTextChange}` props stay.
@@ -310,7 +310,7 @@ description: "Task list for Feature 006 — Multi-File Editing with Tabs"
 
 ### Implementation for User Story 2
 
-- [ ] T005 [P] [US2] Create `src/components/ConfirmDialog.tsx` as a pure presentational wrapper around the native `<dialog>` element ([contracts/components.md](contracts/components.md#3-confirmdialog--new), [research.md](research.md) §6):
+- [X] T005 [P] [US2] Create `src/components/ConfirmDialog.tsx` as a pure presentational wrapper around the native `<dialog>` element ([contracts/components.md](contracts/components.md#3-confirmdialog--new), [research.md](research.md) §6):
   1. Define the props type:
      ```ts
      type ConfirmDialogProps = {
@@ -346,7 +346,7 @@ description: "Task list for Feature 006 — Multi-File Editing with Tabs"
   5. The dialog should NOT close on backdrop click — the user must press one of the three buttons (or ESC = Cancel). Native `<dialog>` already requires explicit `close()` (no backdrop-dismiss); this is satisfied for free.
   6. Component stays well under ~50 lines. No state of its own; the `dialogRef` is the only ref.
 
-- [ ] T006 [US2] Wire the close-tab flow in `src/App.tsx` ([data-model.md](data-model.md#2-tabset-workspace-state-at-the-app-level) state transitions, [research.md](research.md) §6, §7):
+- [X] T006 [US2] Wire the close-tab flow in `src/App.tsx` ([data-model.md](data-model.md#2-tabset-workspace-state-at-the-app-level) state transitions, [research.md](research.md) §6, §7):
   1. The `pendingClose: TabId | null` state was declared in T003; it begins life unused. T006 wires it up.
   2. Replace the placeholder `handleCloseTab(id)` from T003 with the real implementation:
      ```ts
@@ -443,13 +443,13 @@ description: "Task list for Feature 006 — Multi-File Editing with Tabs"
 
 ### Implementation for User Story 3
 
-- [ ] T007 [US3] Update `src/App.tsx` to remove the `<FileHeader />` import and render site:
+- [X] T007 [US3] Update `src/App.tsx` to remove the `<FileHeader />` import and render site:
   1. Delete the line `import FileHeader from "./components/FileHeader";` at the top.
   2. Delete the `<FileHeader fileName={…} fullPath={…} isModified={isModified} />` element from the returned tree.
   3. Confirm `<TabStrip />` remains the first child of `<div className={appShell}>`. Vertical layout is now `[TabStrip] → [Toolbar] → [ErrorBanner?] → [Workspace] → [ConfirmDialog]`.
   4. Confirm no remaining references to `FileHeader` in the file (search the file before closing the task).
 
-- [ ] T008 [P] [US3] Delete the `src/components/FileHeader.tsx` file. There are no other importers after T007. Use `git rm src/components/FileHeader.tsx` so the deletion is properly tracked in the commit.
+- [X] T008 [P] [US3] Delete the `src/components/FileHeader.tsx` file. There are no other importers after T007. Use `git rm src/components/FileHeader.tsx` so the deletion is properly tracked in the commit.
 
 **Checkpoint**: All three user stories are now complete. The workspace top-down ordering is TabStrip → Toolbar → optional ErrorBanner → Workspace. No standalone "file name" header is rendered. Quickstart Scenario C (steps 23–29) passes end-to-end. The window title (Feature 003 FR-007) is unaffected.
 
@@ -459,9 +459,9 @@ description: "Task list for Feature 006 — Multi-File Editing with Tabs"
 
 **Purpose**: Verify the gates the Constitution requires (Principle IX type-check), exercise the manual acceptance walkthrough end-to-end, and re-confirm the chokepoint invariants the contracts depend on. None of these tasks add behaviour — they are quality gates.
 
-- [ ] T009 Run `npm run build` from the repo root. Must complete with zero TypeScript errors. This satisfies the only Quality Gate currently wired up in CI-able form (Constitution Principle IX — see [plan.md](plan.md) Complexity Tracking row "Quality gate setup"). Look out for: missing `useLayoutEffect` / `forwardRef` imports, the `EditorHandle` type not being exported from `Editor.tsx`, prop-type drift between `<App />` and `<TabStrip />` (especially around `Tab` / `TabId` exports), `EditorState` import-type issues under `verbatimModuleSyntax`, and any stale `text` / `setText` / `openedFile` references left behind by the T003 reshape.
+- [X] T009 Run `npm run build` from the repo root. Must complete with zero TypeScript errors. This satisfies the only Quality Gate currently wired up in CI-able form (Constitution Principle IX — see [plan.md](plan.md) Complexity Tracking row "Quality gate setup"). Look out for: missing `useLayoutEffect` / `forwardRef` imports, the `EditorHandle` type not being exported from `Editor.tsx`, prop-type drift between `<App />` and `<TabStrip />` (especially around `Tab` / `TabId` exports), `EditorState` import-type issues under `verbatimModuleSyntax`, and any stale `text` / `setText` / `openedFile` references left behind by the T003 reshape.
 
-- [ ] T010 Execute the manual acceptance walkthrough end-to-end: open the app via `npm run tauri dev` and step through all 38 steps in [quickstart.md](quickstart.md). Record any deviation against the relevant FR/SC ID in a scratch note for the PR description. Pay particular attention to:
+- [X] T010 Execute the manual acceptance walkthrough end-to-end: open the app via `npm run tauri dev` and step through all 38 steps in [quickstart.md](quickstart.md). Record any deviation against the relevant FR/SC ID in a scratch note for the PR description. Pay particular attention to:
   - Step 5 (best-effort cursor/scroll preserved across tab switches — the FR-001 / research.md §3 hot spot).
   - Step 19 (save-failure during close-confirm leaves the tab open with the error banner — the FR-016 hot spot).
   - Step 30 (re-open with unsaved edits preserves in-memory content — the FR-011 hot spot).
@@ -469,7 +469,7 @@ description: "Task list for Feature 006 — Multi-File Editing with Tabs"
   - Step 33 (XSS regression after tab switch — the Principle VII / Feature 002 sanitiser regression check).
   - Step 37 (Untitled tab via the existing New button — the deliberate scope extension documented in [plan.md](plan.md) Complexity Tracking and [research.md](research.md) §11; this is the step most likely to surface unexpected behaviour if Save-As cancellation is mis-handled).
 
-- [ ] T011 Verify single-chokepoint invariants by grep, per [contracts/components.md](contracts/components.md#10-files-touched-at-a-glance) and the Feature 003 / 004 carry-over rules:
+- [X] T011 Verify single-chokepoint invariants by grep, per [contracts/components.md](contracts/components.md#10-files-touched-at-a-glance) and the Feature 003 / 004 carry-over rules:
   - `@tauri-apps/plugin-fs`, `@tauri-apps/plugin-dialog`, and `@tauri-apps/api/webviewWindow` must appear **only** in `src/lib/fileOpen.ts`.
   - `localStorage` must appear **only** in `src/lib/preferences.ts` (the bootstrap script in `index.html` is the documented exception — it reads `milf.theme` for the no-flash-of-wrong-theme effect; it MUST NOT read tab-related data because tabs do not persist).
   - `@codemirror/state` and `@codemirror/view` may newly appear in `src/App.tsx` (the `EditorState` and `EditorHandle` types are imported) and in `src/components/Editor.tsx` (the existing importer). No other module should pull in CodeMirror types.
