@@ -4,30 +4,40 @@
 
 MILF is a lightweight, cross-platform Markdown viewer and editor for Windows, Linux, and macOS.
 
+![MILF showing the split-pane editor with starter content in the dark theme](docs/images/screenshot.png)
+
 ## Status
 
-Early greenfield setup. The project is open for collaboration, with issues, pull requests, CI, security scanning, and contribution guidelines in place.
+Early development, but already usable day-to-day. The split-pane workspace, file open/save, view modes, theming, and auto-save are working today. Specs for shipped and in-progress features live under [`specs/`](specs); open issues and follow-ups are in the [issue tracker](https://github.com/lezli01/milf/issues).
 
-## Goals
+## Features
 
-- Fast local Markdown editing
-- Live preview
-- Clean split-pane interface
-- Cross-platform desktop support
-- Beginner-friendly open-source development
-- AI-assisted, spec-driven workflow
+- **Live split-pane preview.** Edit Markdown on the left, see it rendered on the right, with each pane scrolling independently.
+- **Three view modes.** Editor-only, preview-only, or side-by-side — switch at any time without losing the editor's content, selection, or undo history.
+- **Light and dark theme.** Honors the operating system's appearance preference by default, with a manual toggle in the toolbar.
+- **Open files from disk.** Native file picker biased toward `.md` and `.markdown`, with a fallback to all files.
+- **Save back to disk.** Manual Save plus a visible modified indicator next to the file name so you always know whether your edits are on disk.
+- **Optional auto-save.** Tick the box once and edits land on disk shortly after you stop typing, while a file is open.
+- **Active-file header.** The current file name (or `Untitled`) sits at the top of the workspace; full path is one hover away.
+- **Persistent preferences.** Theme, view mode, and auto-save choice are remembered between launches, stored locally.
+- **Responsive layout.** Side-by-side on a normal window, stacks vertically at narrow widths.
+- **Safe preview.** Rendered HTML is sanitized with DOMPurify before display.
 
-## Planned Stack
+## Stack
 
-- Tauri 2
-- React
-- TypeScript
-- Vite
-- CodeMirror 6
-- markdown-it
-- Tailwind CSS
+- [Tauri 2](https://tauri.app/) — native desktop shell and filesystem access
+- [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
+- [Vite](https://vitejs.dev/) — dev server and build
+- [CodeMirror 6](https://codemirror.net/) — editor
+- [markdown-it](https://github.com/markdown-it/markdown-it) — Markdown rendering
+- [DOMPurify](https://github.com/cure53/DOMPurify) — preview sanitization
+- [Tailwind CSS](https://tailwindcss.com/) — styling
 
-## Development
+For a high-level overview, see [`docs/architecture.md`](docs/architecture.md).
+
+## Quick start
+
+Prerequisites: Node.js LTS, npm, Rust + Cargo, and Tauri 2's [platform prerequisites](https://v2.tauri.app/start/prerequisites/) for your OS.
 
 Install dependencies:
 
@@ -35,31 +45,56 @@ Install dependencies:
 npm ci
 ```
 
-Run the frontend development server:
-
-```sh
-npm run dev
-```
-
-Run the Tauri app:
+Launch the desktop app:
 
 ```sh
 npm run tauri dev
 ```
 
-Run frontend checks:
+Or run just the frontend in a browser:
+
+```sh
+npm run dev
+```
+
+## Development checks
+
+Frontend:
 
 ```sh
 npm run lint
 npm run build
 ```
 
-For Rust/Tauri changes, also run the checks documented in [CONTRIBUTING.md](CONTRIBUTING.md).
+Rust / Tauri (from `src-tauri/`):
 
-## Contributing
+```sh
+cargo fmt --all --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo check --all-targets --all-features
+```
 
-Before starting meaningful work, open or claim an issue and add acceptance criteria. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow, local checks, and pull request expectations.
+## Project layout
+
+```
+src/             React + TypeScript UI (editor, preview, workspace, toolbar)
+src-tauri/       Rust crate that hosts the Tauri desktop runtime
+specs/           Feature specifications (one folder per feature)
+docs/            Architecture notes and supporting docs
+```
+
+## How we work
+
+MILF is spec-driven: every meaningful feature begins with a short spec under [`specs/`](specs) before implementation, with acceptance criteria the work has to meet. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full issue-to-PR workflow and the checks expected before a pull request.
+
+## Privacy
+
+MILF is local-first. Files stay on your machine and the application does not send your content over the network. Preferences are stored in the local browser storage of the desktop runtime.
 
 ## Security
 
-Please do not open public issues for suspected vulnerabilities. See [SECURITY.md](SECURITY.md).
+Please do not open public issues for suspected vulnerabilities. See [`SECURITY.md`](SECURITY.md).
+
+## License
+
+[MIT](LICENSE)
