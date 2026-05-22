@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.4.0](https://github.com/lezli01/milf/compare/v0.3.0...v0.4.0) (2026-05-22)
+
+
+### Features
+
+* file association single instance ([a7a2514](https://github.com/lezli01/milf/commit/a7a2514d9789fa18fb600f34124c5c4b24bff979))
+* implemented ([d7068bd](https://github.com/lezli01/milf/commit/d7068bd8c0e8a236dc6c184896ec4972dff3af02))
+
+
+### Bug Fixes
+
+* file saving issue ([b92e8d4](https://github.com/lezli01/milf/commit/b92e8d4b402a43ec392225d297450df094fb5c37))
+* fixing file path ([8ca042b](https://github.com/lezli01/milf/commit/8ca042b89de1721244f399ab6745ba9f8aa27c74))
+
 ## [0.3.0](https://github.com/lezli01/milf/compare/v0.2.0...v0.3.0) (2026-05-21)
 
 
