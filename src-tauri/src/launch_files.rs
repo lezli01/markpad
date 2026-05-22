@@ -52,6 +52,11 @@ pub async fn read_text_file_by_path(path: String) -> Result<String, String> {
     std::fs::read_to_string(&path).map_err(|err| err.to_string())
 }
 
+#[tauri::command]
+pub async fn write_text_file_by_path(path: String, content: String) -> Result<(), String> {
+    std::fs::write(&path, content).map_err(|err| err.to_string())
+}
+
 pub fn bring_to_front(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.unminimize();

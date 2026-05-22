@@ -15,7 +15,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { readTextFile } from "@tauri-apps/plugin-fs";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 export type OpenResult =
@@ -34,6 +34,21 @@ function basename(path: string): string {
   const normalized = path.replace(/\\/g, "/");
   const idx = normalized.lastIndexOf("/");
   return idx >= 0 ? normalized.slice(idx + 1) : normalized;
+}
+
+/**
+ * Normalize text loaded from disk so the in-memory representation matches what
+ * CodeMirror produces: strip a leading UTF-8 BOM and collapse `\r\n` / lone `\r`
+ * line endings to `\n`. Without this, files saved on Windows with CRLF show as
+ * "modified" the instant they load (CodeMirror reports `\n`-only text but the
+ * raw disk read has `\r\n`).
+ */
+function normalizeLoadedText(content: string): string {
+  let out = content;
+  if (out.charCodeAt(0) === 0xfeff) {
+    out = out.slice(1);
+  }
+  return out.replace(/\r\n?/g, "\n");
 }
 
 function friendlyMessage(err: unknown): string {
@@ -65,8 +80,13 @@ export async function openMarkdownFileByPath(path: string): Promise<OpenResult> 
     return { kind: "error", message: "Empty path." };
   }
   try {
-    const content = await invoke<string>("read_text_file_by_path", { path });
-    return { kind: "ok", name: basename(path), path, content };
+    const raw = await invoke<string>("read_text_file_by_path", { path });
+    return {
+      kind: "ok",
+      name: basename(path),
+      path,
+      content: normalizeLoadedText(raw),
+    };
   } catch (err) {
     console.warn("Failed to read file by path:", err);
     return { kind: "error", message: friendlyMessage(err) };
@@ -99,8 +119,13 @@ export async function openMarkdownFile(): Promise<OpenResult> {
   }
 
   try {
-    const content = await readTextFile(path);
-    return { kind: "ok", name: basename(path), path, content };
+    const raw = await readTextFile(path);
+    return {
+      kind: "ok",
+      name: basename(path),
+      path,
+      content: normalizeLoadedText(raw),
+    };
   } catch (err) {
     console.warn("Failed to read file:", err);
     return { kind: "error", message: friendlyMessage(err) };
@@ -112,7 +137,7 @@ export async function saveMarkdownFile(
   content: string,
 ): Promise<SaveResult> {
   try {
-    await writeTextFile(path, content);
+    await invoke<void>("write_text_file_by_path", { path, content });
     return { kind: "ok" };
   } catch (err) {
     console.warn("Failed to save file:", err);
@@ -143,7 +168,7 @@ export async function saveMarkdownFileAs(
   }
 
   try {
-    await writeTextFile(picked, content);
+    await invoke<void>("write_text_file_by_path", { path: picked, content });
     return { kind: "ok", name: basename(picked), path: picked };
   } catch (err) {
     console.warn("Failed to save file:", err);
