@@ -10,7 +10,7 @@ type ConfirmDialogProps = {
 };
 
 const dialogShell =
-  "rounded-2xl bg-[color:var(--islands-surface)] ring-1 ring-[color:var(--islands-ring)] shadow-lg p-6 max-w-md backdrop:bg-black/30 backdrop:backdrop-blur-sm text-[color:var(--islands-text)]";
+  "m-auto rounded-2xl bg-[color:var(--islands-surface)] ring-1 ring-[color:var(--islands-ring)] shadow-lg p-6 max-w-md backdrop:bg-black/30 backdrop:backdrop-blur-sm text-[color:var(--islands-text)]";
 
 const buttonBase =
   "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-[color:var(--islands-text)] ring-1 ring-[color:var(--islands-ring)] bg-transparent hover:bg-[color:var(--islands-ring)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--islands-cursor)] transition-colors";
