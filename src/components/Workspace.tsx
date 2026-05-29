@@ -1,12 +1,16 @@
-import type { Ref } from "react";
+import { useState, type Ref } from "react";
 import Editor, { type EditorHandle } from "./Editor";
 import Preview, { type PreviewHandle } from "./Preview";
+import FormatToolbar from "./FormatToolbar";
+import type { FormatAction } from "../lib/formatActions";
 import type { ViewMode } from "../lib/preferences";
 
 type WorkspaceProps = {
   text: string;
   viewMode: ViewMode;
   onTextChange: (next: string) => void;
+  onFormat: (id: FormatAction) => void;
+  modKey: string;
   editorRef?: Ref<EditorHandle>;
   previewRef?: Ref<PreviewHandle>;
 };
@@ -17,13 +21,24 @@ const islandCard =
 const islandLabel =
   "text-xs uppercase tracking-wide text-[color:var(--islands-muted)] px-4 pt-3 pb-1 select-none";
 
+// The editor island's header carries the formatting toolbar alongside the
+// label, so it inherits the section's `hidden` in preview mode (below) for free.
+const editorHeader = "flex items-center justify-between gap-2 px-4 pt-3 pb-2";
+
+const islandLabelInline =
+  "text-xs uppercase tracking-wide text-[color:var(--islands-muted)] select-none";
+
 export default function Workspace({
   text,
   viewMode,
   onTextChange,
+  onFormat,
+  modKey,
   editorRef,
   previewRef,
 }: WorkspaceProps) {
+  const [activeFormats, setActiveFormats] = useState<FormatAction[]>([]);
+
   // Editor MUST stay mounted across every view-mode switch so CodeMirror's
   // selection, cursor, and undo history survive (per research.md §3, FR-012).
   // In "preview" mode it is hidden via Tailwind's `hidden` (display: none),
@@ -43,9 +58,21 @@ export default function Workspace({
         className={`${islandCard}${editorHidden ? " hidden" : ""}`}
         aria-label="Editor"
       >
-        <div className={islandLabel}>Editor</div>
+        <div className={editorHeader}>
+          <span className={islandLabelInline}>Editor</span>
+          <FormatToolbar
+            onFormat={onFormat}
+            modKey={modKey}
+            activeFormats={activeFormats}
+          />
+        </div>
         <div className="flex-1 min-h-0 px-4 pb-4">
-          <Editor ref={editorRef} value={text} onChange={onTextChange} />
+          <Editor
+            ref={editorRef}
+            value={text}
+            onChange={onTextChange}
+            onActiveFormatsChange={setActiveFormats}
+          />
         </div>
       </section>
       {previewMounted && (

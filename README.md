@@ -8,7 +8,7 @@
 
 MILF is a lightweight, cross-platform Markdown viewer and editor for Windows, Linux, and macOS.
 
-![MILF showing two open tabs above the toolbar, with starter markdown in the editor pane and its live rendering in the preview pane, in the dark theme](docs/images/screenshot.png)
+![MILF in the dark theme: two open tabs, the Markdown formatting toolbar above the editor, sample Markdown in the editor pane, and its live rendering in the preview pane](docs/images/screenshot.png)
 
 ## Status
 
@@ -17,6 +17,7 @@ Early development, but already usable day-to-day. The split-pane workspace, mult
 ## Features
 
 - **Live split-pane preview.** Edit Markdown on the left, see it rendered on the right, with each pane scrolling independently.
+- **Formatting toolbar.** One-click Markdown formatting from the editor header — bold, italic, strikethrough, inline code, headings, bullet/numbered lists, quotes, links, images, code blocks, tables, and horizontal rules — with shortcuts for the common ones (`Ctrl/⌘+B`, `+I`, `+E`, `+K`, and more). Buttons toggle the mark off when reapplied and light up to show the formatting at the cursor.
 - **Three view modes.** Editor-only, preview-only, or side-by-side — switch at any time without losing the editor's content, selection, or undo history.
 - **Multiple files in tabs.** Open many `.md` files at once; each tab keeps its own content, modified indicator, and cursor/scroll position so switching feels instant.
 - **New empty file.** Start a fresh markdown document from the toolbar or `Ctrl+N` / `⌘N`; the first Save prompts for a path.

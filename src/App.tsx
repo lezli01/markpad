@@ -568,6 +568,8 @@ function App() {
             text={activeText}
             viewMode={viewMode}
             onTextChange={updateActiveTabText}
+            onFormat={(id) => editorRef.current?.format(id)}
+            modKey={modKey}
             editorRef={editorRef}
             previewRef={previewRef}
           />
