@@ -17,6 +17,7 @@ Early development, but already usable day-to-day. The split-pane workspace, mult
 ## Features
 
 - **Live split-pane preview.** Edit Markdown on the left, see it rendered on the right, with each pane scrolling independently.
+- **Formatting toolbar.** One-click Markdown formatting from the editor header — bold, italic, strikethrough, inline code, headings, bullet/numbered lists, quotes, links, images, code blocks, tables, and horizontal rules — with shortcuts for the common ones (`Ctrl/⌘+B`, `+I`, `+E`, `+K`, and more). Buttons toggle the mark off when reapplied and light up to show the formatting at the cursor.
 - **Three view modes.** Editor-only, preview-only, or side-by-side — switch at any time without losing the editor's content, selection, or undo history.
 - **Multiple files in tabs.** Open many `.md` files at once; each tab keeps its own content, modified indicator, and cursor/scroll position so switching feels instant.
 - **New empty file.** Start a fresh markdown document from the toolbar or `Ctrl+N` / `⌘N`; the first Save prompts for a path.
