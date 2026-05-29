@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.0](https://github.com/lezli01/milf/compare/v0.4.0...v0.5.0) (2026-05-29)
+
+
+### Features
+
+* **editor:** add markdown formatting command engine ([e3795f1](https://github.com/lezli01/milf/commit/e3795f16c68924de4a00d4ac718fcb7c3f083dbb))
+* **editor:** expose format API and keyboard shortcuts ([000e02b](https://github.com/lezli01/milf/commit/000e02bc0b34722471389d871cfa2ddab3badb33))
+* markdown editing toolbar ([b06f05e](https://github.com/lezli01/milf/commit/b06f05e1b274dfec627acf95499771c6d512a9cb))
+* **ui:** add markdown formatting toolbar component ([228f6ee](https://github.com/lezli01/milf/commit/228f6eece785a177119d83daa34c88828808de13))
+* **ui:** mount the formatting toolbar in the workspace ([0ea97a0](https://github.com/lezli01/milf/commit/0ea97a0d7852e8af5db7c2c6d3388fe3ef76e101))
+
 ## [0.4.0](https://github.com/lezli01/milf/compare/v0.3.0...v0.4.0) (2026-05-22)
 
 
