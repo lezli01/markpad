@@ -1,13 +1,13 @@
 ---
-name: milf-update-readme
-description: Refresh and verify MILF's README.md before merging a pull request, especially when README.md, docs/images, user-visible features, screenshots, project commands, specs, or app UI behavior changed. Use this skill to check that the README is up to date, update screenshots/images and alt text, add newly shipped capabilities or missing documentation, prune stale claims, and reconcile the Features list with the current code and specs.
+name: markpad-update-readme
+description: Refresh and verify markpad's README.md before merging a pull request, especially when README.md, docs/images, user-visible features, screenshots, project commands, specs, or app UI behavior changed. Use this skill to check that the README is up to date, update screenshots/images and alt text, add newly shipped capabilities or missing documentation, prune stale claims, and reconcile the Features list with the current code and specs.
 ---
 
-# MILF README Update
+# markpad README Update
 
 ## Overview
 
-Use this skill as a pre-merge README pass for MILF. The goal is a README that accurately reflects the product users can run today, with current screenshots, correct commands, and a complete but concise Features list.
+Use this skill as a pre-merge README pass for markpad. The goal is a README that accurately reflects the product users can run today, with current screenshots, correct commands, and a complete but concise Features list.
 
 ## Workflow
 
@@ -20,7 +20,7 @@ Use this skill as a pre-merge README pass for MILF. The goal is a README that ac
    - From the repo root, run:
 
 ```sh
-node .agents/skills/milf-update-readme/scripts/readme-audit.mjs README.md
+node .agents/skills/markpad-update-readme/scripts/readme-audit.mjs README.md
 ```
 
    - Use the report to find missing local images, current README headings, and the existing Features bullets. Treat it as a checklist, not as the source of truth.

@@ -17,7 +17,7 @@ description: "Task list for Feature 004 — Save Controls and Active File Header
 
 - **[P]**: Can run in parallel (different files, no dependencies on incomplete tasks in the same phase)
 - **[Story]**: User-story tag (US1, US2, US3) — present on user-story phase tasks only
-- All paths are repository-relative; absolute paths begin at the repo root `C:/opswat/home/milf/`
+- All paths are repository-relative; absolute paths begin at the repo root `C:/opswat/home/markpad/`
 
 ## Path Conventions
 
@@ -117,14 +117,14 @@ description: "Task list for Feature 004 — Save Controls and Active File Header
 
 ## Phase 5: User Story 3 - Turn on auto-save and have that choice remembered (Priority: P3)
 
-**Goal**: A user can tick an Auto-save checkbox next to the Save button; while ticked and a file is open, the editor's text is written back to disk after a ~1.5 second idle debounce. The preference is persisted under `milf.autoSave` in `localStorage` and restored on next launch. Failure to read the preference falls back to OFF without crashing.
+**Goal**: A user can tick an Auto-save checkbox next to the Save button; while ticked and a file is open, the editor's text is written back to disk after a ~1.5 second idle debounce. The preference is persisted under `markpad.autoSave` in `localStorage` and restored on next launch. Failure to read the preference falls back to OFF without crashing.
 
 **Independent Test**: Open `auto-save-test.md`, tick Auto-save, type "auto-saved line 1", stop typing. Within ~1.5 s the asterisk in the header clears and `cat auto-save-test.md` shows the new content. Type a burst of several sentences without pausing — only one write happens after the burst (no per-keystroke churn). Quit the app and relaunch — the checkbox is still ticked. Toggle Auto-save off mid-edit — pending debounced saves cancel. Maps to spec FR-012 through FR-020 and SC-004, SC-005, SC-006.
 
 ### Implementation for User Story 3
 
 - [X] T007 [P] [US3] Extend `src/lib/preferences.ts` with the new `autoSave` preference, following the existing pattern used for `theme` and `viewMode` (per [research.md](research.md) §4 and [contracts/components.md](contracts/components.md#libpreferencests-updated-from-feature-003)):
-  1. Add module-level constants below the existing ones: `const AUTO_SAVE_KEY = "milf.autoSave";` and `const ALLOWED_AUTO_SAVE = ["on", "off"] as const;`.
+  1. Add module-level constants below the existing ones: `const AUTO_SAVE_KEY = "markpad.autoSave";` and `const ALLOWED_AUTO_SAVE = ["on", "off"] as const;`.
   2. Export `function getAutoSave(): boolean` that wraps `window.localStorage.getItem(AUTO_SAVE_KEY)` in try/catch: returns `true` if the stored value is exactly `"on"`, `false` if it is exactly `"off"`, and `false` for any other value (`null`, unknown, malformed) or if `localStorage` throws. This is the FR-019 / FR-020 default-OFF behaviour.
   3. Export `function setAutoSave(on: boolean): void` that wraps `window.localStorage.setItem(AUTO_SAVE_KEY, on ? "on" : "off")` in try/catch, logging a `console.warn` on failure but not throwing. Same best-effort pattern as `setTheme` / `setViewMode`.
   4. Do NOT modify the existing `getTheme`, `setTheme`, `getViewMode`, or `setViewMode` functions or their constants.
@@ -168,7 +168,7 @@ description: "Task list for Feature 004 — Save Controls and Active File Header
 - [ ] T011 Execute the manual acceptance walkthrough end-to-end: open the app via `npm run tauri dev` and step through all 25 steps in `specs/004-save-file-controls/quickstart.md`. Record any deviation against the relevant FR/SC ID in a scratch note for the PR description. Pay particular attention to step 21 (concurrent Save during in-flight auto-save — the SC-005 hot spot) and step 24 (sanitizer regression after save round-trip — the Principle VII check).
 - [X] T012 Verify single-chokepoint invariants by grep, per [contracts/components.md](contracts/components.md) Conventions:
   - `@tauri-apps/plugin-fs`, `@tauri-apps/plugin-dialog`, and `@tauri-apps/api/webviewWindow` must appear **only** in `src/lib/fileOpen.ts`.
-  - `localStorage` must appear **only** in `src/lib/preferences.ts` (the bootstrap script in `index.html` is the documented exception — it reads `milf.theme` for the no-flash-of-wrong-theme effect, but it MUST NOT read `milf.autoSave` because auto-save has no first-paint impact).
+  - `localStorage` must appear **only** in `src/lib/preferences.ts` (the bootstrap script in `index.html` is the documented exception — it reads `markpad.theme` for the no-flash-of-wrong-theme effect, but it MUST NOT read `markpad.autoSave` because auto-save has no first-paint impact).
   Use `Grep` for `@tauri-apps/plugin-fs|@tauri-apps/plugin-dialog|@tauri-apps/api/webviewWindow` across `src/`, and a separate grep for `localStorage` across `src/` and `index.html`. Any extra match is a chokepoint violation to fix.
 
 ---

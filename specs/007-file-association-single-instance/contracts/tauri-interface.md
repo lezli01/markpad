@@ -1,6 +1,6 @@
 # Phase 1 — Tauri Interface Contract: Commands and Events
 
-This document is the canonical reference for the **Rust ↔ TypeScript boundary** in Feature 007. It defines three new Tauri commands (`load_session`, `save_session`, `get_pending_files`) and one new Tauri event (`milf://open-files`). The frontend module APIs that wrap these calls are documented in [frontend-modules.md](frontend-modules.md); the in-memory schemas they exchange are documented in [data-model.md](../data-model.md).
+This document is the canonical reference for the **Rust ↔ TypeScript boundary** in Feature 007. It defines three new Tauri commands (`load_session`, `save_session`, `get_pending_files`) and one new Tauri event (`markpad://open-files`). The frontend module APIs that wrap these calls are documented in [frontend-modules.md](frontend-modules.md); the in-memory schemas they exchange are documented in [data-model.md](../data-model.md).
 
 The TypeScript signatures here are the authoritative types for `src/lib/session.ts` and `src/lib/launchFiles.ts`. The Rust signatures are the authoritative types for `src-tauri/src/session.rs` and `src-tauri/src/launch_files.rs`. The JSON payloads they exchange are derived from these signatures via Tauri's `serde`-based serialization.
 
@@ -160,7 +160,7 @@ export async function getPendingFiles(): Promise<string[]> {
 
 ---
 
-## 4. Event: `milf://open-files`
+## 4. Event: `markpad://open-files`
 
 Push file paths to the frontend after the frontend signaled readiness.
 
@@ -177,7 +177,7 @@ fn route_paths(app: &tauri::AppHandle, paths: Vec<PathBuf>) {
         let payload = serde_json::json!({
             "paths": paths.iter().map(|p| p.to_string_lossy().into_owned()).collect::<Vec<_>>()
         });
-        let _ = app.emit("milf://open-files", payload);
+        let _ = app.emit("markpad://open-files", payload);
     } else {
         pending.extend(paths);
     }
@@ -194,7 +194,7 @@ export type OpenFilesPayload = { paths: string[] };
 export async function subscribeToOpenFiles(
   handler: (paths: string[]) => void,
 ): Promise<UnlistenFn> {
-  return listen<OpenFilesPayload>("milf://open-files", (event) => {
+  return listen<OpenFilesPayload>("markpad://open-files", (event) => {
     handler(event.payload.paths);
   });
 }
@@ -202,9 +202,9 @@ export async function subscribeToOpenFiles(
 
 ### Behavior
 
-- **Event name**: `milf://open-files` (string literal). The pseudo-scheme prefix is a naming convention for grep-ability; Tauri places no constraints on event names.
+- **Event name**: `markpad://open-files` (string literal). The pseudo-scheme prefix is a naming convention for grep-ability; Tauri places no constraints on event names.
 - **Payload**: `{ paths: string[] }` — an array of canonical absolute path strings (UTF-8 via `to_string_lossy`). Empty arrays are never emitted (the emit is short-circuited when `paths.is_empty()`).
-- **Delivery**: the event is emitted via `app.emit` (broadcast to all windows). Since MILF runs a single window per FR-005, this is functionally identical to emitting to the main window specifically.
+- **Delivery**: the event is emitted via `app.emit` (broadcast to all windows). Since markpad runs a single window per FR-005, this is functionally identical to emitting to the main window specifically.
 - **Ordering**: when multiple second invocations arrive in rapid succession, each produces its own emit. The frontend handler runs them in arrival order (Tauri's listener queue preserves order for a single subscriber). The "last successfully opened" rule (FR-022) means the LAST file in the LAST emit becomes active; earlier files are background tabs.
 - **Concurrency with `get_pending_files`**: the lock ordering in `route_paths` ensures that any path queued before the frontend-ready flag is in the buffer (returned by `get_pending_files`), and any path arriving after the flag is set is emitted (received by the live subscription). No path is delivered twice; none is lost.
 - **Bring-to-front**: `bring_to_front(app)` is called BEFORE the emit so the OS window animation starts immediately. The emit completes microseconds later.
@@ -246,7 +246,7 @@ fn bring_to_front(app: &tauri::AppHandle) {
 
 ### Note on bare second invocation
 
-The single-instance plugin callback receives the second invocation's `argv` — possibly empty (e.g., the user ran a bare `milf` while another `milf` was open, expecting "raise the existing window"). The implementation MUST call `bring_to_front` unconditionally in the callback, BEFORE deciding whether to route any paths:
+The single-instance plugin callback receives the second invocation's `argv` — possibly empty (e.g., the user ran a bare `markpad` while another `markpad` was open, expecting "raise the existing window"). The implementation MUST call `bring_to_front` unconditionally in the callback, BEFORE deciding whether to route any paths:
 
 ```rust
 pub fn handle_second_invocation(app: &tauri::AppHandle, argv: Vec<String>, cwd: String) {
@@ -290,10 +290,10 @@ The full manual test plan is in [quickstart.md](../quickstart.md). The contract-
 | `load_session` returns the saved record on relaunch | Scenario D (session restore) |
 | `load_session` returns empty on missing/corrupt file | Scenario E (edge cases) |
 | `save_session` writes after every tab change (debounced) | Scenario D + observe `session.json` mtime |
-| `save_session` writes are atomic (no half-files after crash) | Scenario E (kill MILF mid-write) |
+| `save_session` writes are atomic (no half-files after crash) | Scenario E (kill markpad mid-write) |
 | `get_pending_files` returns CLI args on cold start | Scenario C (CLI args) |
 | `get_pending_files` returns empty when launched bare | Scenario A / D |
-| `milf://open-files` event received for second invocation | Scenario B (single-instance + file routing) |
-| `milf://open-files` event received for macOS Opened | Scenario B (macOS only) |
+| `markpad://open-files` event received for second invocation | Scenario B (single-instance + file routing) |
+| `markpad://open-files` event received for macOS Opened | Scenario B (macOS only) |
 | `bring_to_front` raises minimized window on second invocation | Scenario B |
-| `bring_to_front` is called for bare `milf` | Scenario B (bare invocation) |
+| `bring_to_front` is called for bare `markpad` | Scenario B (bare invocation) |

@@ -12,11 +12,11 @@
 
 ### User Story 1 - Open an existing markdown file from disk (Priority: P1)
 
-A user has markdown notes saved as files on their computer (a meeting note, a README, a journal entry). They launch MILF and use a clearly visible "Open" control to pick the file from a native file dialog. The editor immediately shows the file's text, the preview renders it, and the user can read and revise their existing notes inside MILF instead of in a plain text editor.
+A user has markdown notes saved as files on their computer (a meeting note, a README, a journal entry). They launch markpad and use a clearly visible "Open" control to pick the file from a native file dialog. The editor immediately shows the file's text, the preview renders it, and the user can read and revise their existing notes inside markpad instead of in a plain text editor.
 
-**Why this priority**: This is the change that turns MILF from a starter-content demo into a usable tool. Without it, the application can only ever show throwaway in-memory content. Every subsequent feature (saving, recent files, watching for changes, etc.) builds on the existence of a working "open" path.
+**Why this priority**: This is the change that turns markpad from a starter-content demo into a usable tool. Without it, the application can only ever show throwaway in-memory content. Every subsequent feature (saving, recent files, watching for changes, etc.) builds on the existence of a working "open" path.
 
-**Independent Test**: Save a small markdown file (e.g., `# Title\n\nSome **bold** text.`) to disk, launch MILF, click the Open control, pick that file, and confirm the editor shows the exact text and the preview shows the rendered output.
+**Independent Test**: Save a small markdown file (e.g., `# Title\n\nSome **bold** text.`) to disk, launch markpad, click the Open control, pick that file, and confirm the editor shows the exact text and the preview shows the rendered output.
 
 **Acceptance Scenarios**:
 

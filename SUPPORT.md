@@ -1,6 +1,6 @@
 # Support
 
-MILF is an early open-source project. The best support path depends on what you need.
+markpad is an early open-source project. The best support path depends on what you need.
 
 ## Bug Reports
 

@@ -64,7 +64,7 @@ No other module in the codebase imports from `session.ts`.
 
 ## 2. `src/lib/launchFiles.ts` (NEW)
 
-Single chokepoint for the launch-files protocol — the cold-start drain command and the live-event subscription. The frontend never invokes `get_pending_files` or `listen("milf://open-files", …)` directly; everything goes through this module.
+Single chokepoint for the launch-files protocol — the cold-start drain command and the live-event subscription. The frontend never invokes `get_pending_files` or `listen("markpad://open-files", …)` directly; everything goes through this module.
 
 ### Module-level documentation comment
 
@@ -74,11 +74,11 @@ Single chokepoint for the launch-files protocol — the cold-start drain command
 //   - getPendingFiles(): drain the cold-start buffer (call once on mount, BEFORE doing anything
 //     that would replay events). Marks the frontend as "ready" on the Rust side; subsequent
 //     arrivals come via the live event below.
-//   - subscribeToOpenFiles(handler): listen for the live "milf://open-files" event for handoffs
+//   - subscribeToOpenFiles(handler): listen for the live "markpad://open-files" event for handoffs
 //     that arrive after the frontend is ready (second invocations, macOS Opened after launch).
 // The Rust side guarantees that every routed file is delivered exactly once via one of these
 // two paths. This module is the only TS importer of `invoke("get_pending_files")` and
-// `listen("milf://open-files", …)`.
+// `listen("markpad://open-files", …)`.
 ```
 
 ### Exports
@@ -105,7 +105,7 @@ export async function subscribeToOpenFiles(
   - The caller is responsible for handling the returned paths — typically by iterating them and calling the new `openMarkdownFileByPath` (see §3 below) for each.
 
 - `subscribeToOpenFiles(handler)`:
-  - Registers `handler` to be called every time the Rust side emits `milf://open-files`. The handler receives the array of canonical absolute path strings.
+  - Registers `handler` to be called every time the Rust side emits `markpad://open-files`. The handler receives the array of canonical absolute path strings.
   - Returns an `UnlistenFn` — a function the caller invokes to stop listening (typically in a `useEffect` cleanup).
   - The handler is called on every event; the caller (in `App.tsx`) implements the dedup + open + activate-last logic for each call.
   - The subscription is established asynchronously; the caller MUST `await` the returned promise before assuming events are being delivered.
@@ -122,7 +122,7 @@ No other module in the codebase imports from `launchFiles.ts`.
 ### Constitution alignment
 
 - Principle I: two functions, one payload type, one event name string. The "ready flag" complexity is entirely in Rust.
-- Principle VIII: a `grep -r 'milf://open-files\\|get_pending_files' src/` shows exactly this file.
+- Principle VIII: a `grep -r 'markpad://open-files\\|get_pending_files' src/` shows exactly this file.
 
 ---
 
@@ -142,7 +142,7 @@ The existing comment (lines 1-4 in the current file) is extended to cross-refere
 //
 // Companion chokepoints (added in Feature 007):
 //   - src/lib/session.ts        owns load_session / save_session
-//   - src/lib/launchFiles.ts    owns get_pending_files + milf://open-files event
+//   - src/lib/launchFiles.ts    owns get_pending_files + markpad://open-files event
 ```
 
 ### New export
@@ -185,7 +185,7 @@ export async function openMarkdownFileByPath(path: string): Promise<OpenResult> 
 
 ### Callers of the new function
 
-- `App.tsx`'s open-paths handler — called inside the mount-time effect AND inside the live `milf://open-files` handler.
+- `App.tsx`'s open-paths handler — called inside the mount-time effect AND inside the live `markpad://open-files` handler.
 
 No other module imports it.
 
@@ -386,7 +386,7 @@ This is by design: the user-visible UI in Feature 007 is not new chrome — it i
 | File | Action | Why |
 |---|---|---|
 | `src/lib/session.ts` | NEW | Chokepoint for `load_session` / `save_session`. |
-| `src/lib/launchFiles.ts` | NEW | Chokepoint for `get_pending_files` + `milf://open-files` event. |
+| `src/lib/launchFiles.ts` | NEW | Chokepoint for `get_pending_files` + `markpad://open-files` event. |
 | `src/lib/fileOpen.ts` | UPDATE | Add `openMarkdownFileByPath` export; update top-comment cross-references. |
 | `src/App.tsx` | UPDATE | Mount-time effect, debounced save effect, shared open-paths handler, `tabsRef`. |
 | `src/components/*` | UNCHANGED | All Feature 006 components keep their contracts. |

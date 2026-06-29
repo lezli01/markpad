@@ -4,7 +4,7 @@ This document resolves the open technical questions for Feature 003. Each sectio
 
 ## 1. Persisting user preferences (theme, view mode)
 
-**Decision**: Persist preferences via `window.localStorage` under a small set of stable keys (`milf.theme`, `milf.viewMode`). Read on app mount with a defensive `try { JSON.parse(...) } catch` and `if (allowed.includes(value))` guard; fall back to the documented defaults (theme = system; viewMode = `split`) on any failure. Wrap reads/writes in `src/lib/preferences.ts` so the rest of the app never touches `localStorage` directly.
+**Decision**: Persist preferences via `window.localStorage` under a small set of stable keys (`markpad.theme`, `markpad.viewMode`). Read on app mount with a defensive `try { JSON.parse(...) } catch` and `if (allowed.includes(value))` guard; fall back to the documented defaults (theme = system; viewMode = `split`) on any failure. Wrap reads/writes in `src/lib/preferences.ts` so the rest of the app never touches `localStorage` directly.
 
 **Rationale**:
 - Tauri's webview already exposes `localStorage`. It is per-app, persistent across launches, and requires zero new dependencies. For two scalar preferences it is the minimum-complexity answer.
@@ -19,7 +19,7 @@ This document resolves the open technical questions for Feature 003. Each sectio
 **Implementation notes**:
 - Module shape: `getTheme()`, `setTheme(theme)`, `getViewMode()`, `setViewMode(mode)`, each fully synchronous.
 - Whitelist the allowed values inside the module so a hand-edited localStorage entry cannot crash the app — it just falls back to the default (FR-020).
-- Storage keys are prefixed (`milf.*`) so we have a clean migration path if we change the surface later.
+- Storage keys are prefixed (`markpad.*`) so we have a clean migration path if we change the surface later.
 
 ---
 
@@ -40,7 +40,7 @@ This document resolves the open technical questions for Feature 003. Each sectio
 
 **Implementation notes**:
 - Initial value resolution at mount (single function, in `src/lib/preferences.ts`):
-  1. Read `milf.theme` from localStorage. If it is `"light"` or `"dark"`, use it.
+  1. Read `markpad.theme` from localStorage. If it is `"light"` or `"dark"`, use it.
   2. Otherwise, return `window.matchMedia('(prefers-color-scheme: dark)').matches ? "dark" : "light"`. If `matchMedia` is unavailable (extremely unlikely in a Tauri webview), return `"light"` per the FR-016 fallback.
 - Write `<html data-theme="...">` in a tiny inline-script bootstrap in `index.html` **before** React mounts. This prevents the brief flash of the wrong theme during React's hydration window. The script is ~5 lines and reads the same localStorage key.
 - After React mounts, a `useEffect` in the app re-applies `data-theme` so subsequent toggles stay in sync.
@@ -115,7 +115,7 @@ Wrap the entire "show dialog → user picks file → read file → return result
 
 ## 5. Showing which file is loaded (window title)
 
-**Decision**: After a successful open, call `getCurrentWebviewWindow().setTitle(`${fileName} — MILF`)` from `@tauri-apps/api/window`. When no file is loaded (starter content), the title is the bare app name (`"MILF"`). The current `fileName` lives in React state in `App.tsx` alongside the text.
+**Decision**: After a successful open, call `getCurrentWebviewWindow().setTitle(`${fileName} — markpad`)` from `@tauri-apps/api/window`. When no file is loaded (starter content), the title is the bare app name (`"markpad"`). The current `fileName` lives in React state in `App.tsx` alongside the text.
 
 **Rationale**:
 - The OS-native title bar is the universal "what document am I editing?" affordance on every desktop platform. Reusing it costs us nothing in screen real-estate and is immediately discoverable (supports FR-007 and SC-007).

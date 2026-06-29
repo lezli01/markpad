@@ -6,7 +6,7 @@
 
 ## Summary
 
-Turn MILF from "one document at a time" into "several documents on a strip of tabs". Each open file becomes a tab with its own text, modified flag, and best-effort cursor/scroll. Switching the active tab swaps which tab the existing editor, preview, Save control, and auto-save effect act on. The Feature 004 standalone file-name header (`<FileHeader />`) is removed; a new `<TabStrip />` takes its place at the top of the workspace and shows every open file plus a modified indicator per tab. Closing a tab with unsaved edits prompts Save / Discard / Cancel; closing the last tab returns the workspace to the empty state Features 003 and 004 already define.
+Turn markpad from "one document at a time" into "several documents on a strip of tabs". Each open file becomes a tab with its own text, modified flag, and best-effort cursor/scroll. Switching the active tab swaps which tab the existing editor, preview, Save control, and auto-save effect act on. The Feature 004 standalone file-name header (`<FileHeader />`) is removed; a new `<TabStrip />` takes its place at the top of the workspace and shows every open file plus a modified indicator per tab. Closing a tab with unsaved edits prompts Save / Discard / Cancel; closing the last tab returns the workspace to the empty state Features 003 and 004 already define.
 
 Technical approach: keep the existing chokepoints and the existing single Editor / Preview / Toolbar; only the **shape of the state** changes. `App.tsx` swaps its flat `(text, savedText, openedFile)` triple for a `tabs: Tab[]` list plus an `activeTabId` pointer. The text the editor renders is derived: `tabs.find(t => t.id === activeTabId)?.text ?? ""`. The "saving" flag and the "pending follow-up" ref become per-tab (a `Map<TabId, boolean>`) so saves on background tabs (a Save attempt during close-confirm) cannot collide with the active tab. CodeMirror's selection and scroll are preserved across tab switches by snapshotting `EditorState` per tab in a ref — the existing `<Editor />` component grows a tiny imperative API (`getState()` / `setState()`) via `forwardRef` to expose this. Close-with-unsaved-changes uses a new lightweight modal component (`<ConfirmDialog />`) — three buttons, no new dep. The Feature 004 `<FileHeader />` component file is deleted along with its prop drilling. No new npm or cargo deps; no new Tauri capabilities; no new `localStorage` keys. The existing New button is retained and re-interpreted: it now adds an `Untitled-N` tab rather than blowing away the current document (see Complexity Tracking — a deliberate, minimal scope extension to keep the existing UX coherent).
 
@@ -21,7 +21,7 @@ Technical approach: keep the existing chokepoints and the existing single Editor
 - No new dev deps.
 
 **Storage**:
-- `localStorage` keys unchanged: `milf.theme`, `milf.viewMode`, `milf.autoSave` (all from Features 003 / 004). Tabs do NOT persist across launches in this feature (spec Assumptions — restore-on-launch is a candidate for a follow-up).
+- `localStorage` keys unchanged: `markpad.theme`, `markpad.viewMode`, `markpad.autoSave` (all from Features 003 / 004). Tabs do NOT persist across launches in this feature (spec Assumptions — restore-on-launch is a candidate for a follow-up).
 - File-system access unchanged: read via `readTextFile`, write via `writeTextFile`, dialog via `tauri-plugin-dialog`. The capability list in `src-tauri/capabilities/default.json` is unchanged (the existing `fs:allow-read-text-file` + `fs:allow-write-text-file` + `dialog:default` already cover this feature).
 - React state grows: `tabs: Tab[]`, `activeTabId: TabId | null`, plus existing prefs. CodeMirror `EditorState` snapshots live in a `useRef(new Map<TabId, EditorState>())` — never in React state (they are large objects React would re-compare on every render).
 
@@ -97,7 +97,7 @@ specs/006-multi-file-tabs/
 ### Source Code (repository root)
 
 ```text
-milf/
+markpad/
 ├── src/                              # React + TypeScript frontend
 │   ├── main.tsx                      # UNCHANGED
 │   ├── App.tsx                       # UPDATE: replace (text, savedText, openedFile, saving) with (tabs, activeTabId); add tab helpers (openInTab, activateTab, closeTab, updateActiveTabText); per-tab saving refs; render <TabStrip /> instead of <FileHeader />; wire <ConfirmDialog />

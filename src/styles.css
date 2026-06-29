@@ -53,81 +53,81 @@ body {
    markdown-it emits standard tags (h1-h6, p, ul/ol/li, a, code, pre,
    blockquote, hr, table, img); we style them via descendant selectors
    so contributors don't have to inject classes into generated HTML. */
-.milf-preview {
+.markpad-preview {
   font-size: 0.9375rem;
   line-height: 1.65;
 }
 
-.milf-preview > :first-child {
+.markpad-preview > :first-child {
   margin-top: 0;
 }
 
-.milf-preview > :last-child {
+.markpad-preview > :last-child {
   margin-bottom: 0;
 }
 
-.milf-preview h1,
-.milf-preview h2,
-.milf-preview h3,
-.milf-preview h4,
-.milf-preview h5,
-.milf-preview h6 {
+.markpad-preview h1,
+.markpad-preview h2,
+.markpad-preview h3,
+.markpad-preview h4,
+.markpad-preview h5,
+.markpad-preview h6 {
   font-weight: 600;
   line-height: 1.25;
   margin: 1.5rem 0 0.75rem;
 }
 
-.milf-preview h1 {
+.markpad-preview h1 {
   font-size: 1.75rem;
 }
-.milf-preview h2 {
+.markpad-preview h2 {
   font-size: 1.4rem;
 }
-.milf-preview h3 {
+.markpad-preview h3 {
   font-size: 1.2rem;
 }
-.milf-preview h4 {
+.markpad-preview h4 {
   font-size: 1.05rem;
 }
-.milf-preview h5,
-.milf-preview h6 {
+.markpad-preview h5,
+.markpad-preview h6 {
   font-size: 1rem;
   color: var(--islands-muted);
 }
 
-.milf-preview p {
+.markpad-preview p {
   margin: 0.75rem 0;
 }
 
-.milf-preview a {
+.markpad-preview a {
   color: var(--islands-cursor);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.milf-preview a:hover {
+.markpad-preview a:hover {
   text-decoration-thickness: 2px;
 }
 
-.milf-preview ul,
-.milf-preview ol {
+.markpad-preview ul,
+.markpad-preview ol {
   margin: 0.75rem 0;
   padding-left: 1.5rem;
 }
 
-.milf-preview ul {
+.markpad-preview ul {
   list-style: disc;
 }
 
-.milf-preview ol {
+.markpad-preview ol {
   list-style: decimal;
 }
 
-.milf-preview li {
+.markpad-preview li {
   margin: 0.25rem 0;
 }
 
-.milf-preview code {
+.markpad-preview code {
   font-family:
     ui-monospace, "SF Mono", Monaco, Menlo, Consolas, "Liberation Mono",
     monospace;
@@ -137,7 +137,7 @@ body {
   background: var(--islands-ring);
 }
 
-.milf-preview pre {
+.markpad-preview pre {
   margin: 0.75rem 0;
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
@@ -145,13 +145,13 @@ body {
   overflow-x: auto;
 }
 
-.milf-preview pre code {
+.markpad-preview pre code {
   padding: 0;
   background: transparent;
   font-size: 0.85em;
 }
 
-.milf-preview blockquote {
+.markpad-preview blockquote {
   margin: 0.75rem 0;
   padding: 0.25rem 0 0.25rem 0.75rem;
   border-left: 3px solid var(--islands-muted);
@@ -159,26 +159,26 @@ body {
   font-style: italic;
 }
 
-.milf-preview hr {
+.markpad-preview hr {
   margin: 1.25rem 0;
   border: none;
   border-top: 1px solid var(--islands-ring);
 }
 
-.milf-preview table {
+.markpad-preview table {
   border-collapse: collapse;
   margin: 0.75rem 0;
   font-size: 0.9em;
 }
 
-.milf-preview th,
-.milf-preview td {
+.markpad-preview th,
+.markpad-preview td {
   border: 1px solid var(--islands-ring);
   padding: 0.4rem 0.6rem;
   text-align: left;
 }
 
-.milf-preview img {
+.markpad-preview img {
   max-width: 100%;
   height: auto;
 }

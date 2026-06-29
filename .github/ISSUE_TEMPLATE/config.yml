@@ -1,6 +1,6 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security report
-    url: https://github.com/lezli01/milf/security/advisories/new
+    url: https://github.com/lezli01/markpad/security/advisories/new
     about: Report suspected vulnerabilities privately.
 

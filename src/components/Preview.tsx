@@ -34,7 +34,7 @@ const Preview = forwardRef<PreviewHandle, PreviewProps>(function Preview(
     return (
       <div
         ref={divRef}
-        className="milf-preview h-full overflow-auto p-4 text-sm italic text-[color:var(--islands-muted)]"
+        className="markpad-preview h-full overflow-auto p-4 text-sm italic text-[color:var(--islands-muted)]"
       >
         Preview will appear here.
       </div>
@@ -44,7 +44,7 @@ const Preview = forwardRef<PreviewHandle, PreviewProps>(function Preview(
   return (
     <div
       ref={divRef}
-      className="milf-preview h-full overflow-auto p-4"
+      className="markpad-preview h-full overflow-auto p-4"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

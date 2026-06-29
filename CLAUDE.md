@@ -1,8 +1,8 @@
-# AI Development Rules for MILF
+# AI Development Rules for markpad
 
 ## Project
 
-MILF stands for Markdown Interface & Live Formatter.
+markpad stands for Markdown editor with live preview.
 
 ## Principles
 

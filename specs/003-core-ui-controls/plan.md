@@ -21,7 +21,7 @@ Technical approach: stay on the approved stack (Tauri 2, React 19, TypeScript, V
 - No new dev deps.
 
 **Storage**:
-- `localStorage` in the webview, two keys: `milf.theme` (`"light" | "dark"`) and `milf.viewMode` (`"editor" | "preview" | "split"`).
+- `localStorage` in the webview, two keys: `markpad.theme` (`"light" | "dark"`) and `markpad.viewMode` (`"editor" | "preview" | "split"`).
 - Read-only access to user-picked text files via `tauri-plugin-fs` (path-scoped per Tauri 2 capability model).
 - The Document remains in-memory (unchanged from 002 — no save layer is added here).
 
@@ -92,7 +92,7 @@ specs/003-core-ui-controls/
 ### Source Code (repository root)
 
 ```text
-milf/
+markpad/
 ├── src/                              # React + TypeScript frontend
 │   ├── main.tsx                      # UNCHANGED
 │   ├── App.tsx                       # UPDATE: owns 5 state fields, renders Toolbar + ErrorBanner + Workspace

@@ -1,0 +1,4 @@
+interface:
+  display_name: "markpad README Updater"
+  short_description: "Refresh README content, images, and features"
+  default_prompt: "Use $markpad-update-readme before merging this PR to refresh README.md."

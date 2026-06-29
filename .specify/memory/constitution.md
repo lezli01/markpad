@@ -24,9 +24,9 @@ Templates requiring updates:
 Follow-up TODOs: none
 -->
 
-# MILF Constitution
+# markpad Constitution
 
-MILF (Markdown Interface & Live Formatter) is a beginner-friendly, cross-platform
+markpad (Markdown editor with live preview) is a beginner-friendly, cross-platform
 desktop Markdown viewer and editor for Windows, Linux, and macOS. This
 constitution defines the non-negotiable engineering principles, workflow, and
 governance that all contributors and AI assistants MUST follow.
@@ -40,13 +40,13 @@ the simpler alternative. Three similar lines beat a premature abstraction; one
 screen of plain code beats a clever framework. Ship the boring version unless a
 written reason exists to do otherwise.
 
-**Rationale**: MILF is built by and for beginners. Simple code attracts
+**Rationale**: markpad is built by and for beginners. Simple code attracts
 contributors, reduces bugs, and keeps the maintainer in control. Complexity
 creep is the single largest threat to a small open-source project.
 
 ### II. Cross-Platform Desktop Support
 
-MILF MUST build and run on Windows, Linux, and macOS from a single codebase.
+markpad MUST build and run on Windows, Linux, and macOS from a single codebase.
 Platform-specific code MUST be isolated behind clear abstractions and exercised
 on each target before a release is cut.
 
@@ -85,7 +85,7 @@ Human ownership is what keeps the project coherent and the maintainer learning.
 
 ### VI. Local-First & Private by Default
 
-MILF MUST operate fully offline against local files. Network access,
+markpad MUST operate fully offline against local files. Network access,
 telemetry, cloud sync, and account systems MUST NOT be added without an
 explicit spec, a clear user-visible opt-in, and a security review. The default
 install MUST send zero data anywhere.
@@ -111,7 +111,7 @@ working `README.md`, a one-command setup, a `CONTRIBUTING.md` once outside
 contributors arrive, descriptive issue labels (`good-first-issue` where
 appropriate), and code reviews that teach rather than gatekeep.
 
-**Rationale**: MILF is a learning project as much as a tool. Friction at the
+**Rationale**: markpad is a learning project as much as a tool. Friction at the
 entry point kills the contributor pipeline before it starts.
 
 ### IX. Quality Gates: Tests, Lint, Format, CI

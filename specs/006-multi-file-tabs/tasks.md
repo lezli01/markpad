@@ -17,7 +17,7 @@ description: "Task list for Feature 006 — Multi-File Editing with Tabs"
 
 - **[P]**: Can run in parallel (different files, no dependencies on incomplete tasks in the same phase)
 - **[Story]**: User-story tag (US1, US2, US3) — present on user-story phase tasks only
-- All paths are repository-relative; absolute paths begin at the repo root `C:/opswat/home/milf/`
+- All paths are repository-relative; absolute paths begin at the repo root `C:/opswat/home/markpad/`
 
 ## Path Conventions
 
@@ -439,7 +439,7 @@ description: "Task list for Feature 006 — Multi-File Editing with Tabs"
 
 **Goal**: Delete the standalone `<FileHeader />` so the tab strip is the sole in-workspace indicator of the active file (FR-023). The window title (Feature 003 FR-007) is preserved unchanged (FR-024). The per-tab modified indicator inside `<TabStrip />` was already implemented in US1's T002; US3 is the cleanup PR.
 
-**Independent Test**: Walk through quickstart Scenario C (steps 23–29). The standalone "filename + asterisk" header above the toolbar is gone; the tab strip is the only in-workspace surface that shows file names and modified state; the OS window title still says `<filename> — MILF` for the active tab; long filenames truncate inside pills with a hover tooltip; the tab strip remains visible across all view modes. Maps to spec FR-007, FR-008, FR-009, FR-010, FR-023, FR-024, and SC-009.
+**Independent Test**: Walk through quickstart Scenario C (steps 23–29). The standalone "filename + asterisk" header above the toolbar is gone; the tab strip is the only in-workspace surface that shows file names and modified state; the OS window title still says `<filename> — markpad` for the active tab; long filenames truncate inside pills with a hover tooltip; the tab strip remains visible across all view modes. Maps to spec FR-007, FR-008, FR-009, FR-010, FR-023, FR-024, and SC-009.
 
 ### Implementation for User Story 3
 
@@ -471,7 +471,7 @@ description: "Task list for Feature 006 — Multi-File Editing with Tabs"
 
 - [X] T011 Verify single-chokepoint invariants by grep, per [contracts/components.md](contracts/components.md#10-files-touched-at-a-glance) and the Feature 003 / 004 carry-over rules:
   - `@tauri-apps/plugin-fs`, `@tauri-apps/plugin-dialog`, and `@tauri-apps/api/webviewWindow` must appear **only** in `src/lib/fileOpen.ts`.
-  - `localStorage` must appear **only** in `src/lib/preferences.ts` (the bootstrap script in `index.html` is the documented exception — it reads `milf.theme` for the no-flash-of-wrong-theme effect; it MUST NOT read tab-related data because tabs do not persist).
+  - `localStorage` must appear **only** in `src/lib/preferences.ts` (the bootstrap script in `index.html` is the documented exception — it reads `markpad.theme` for the no-flash-of-wrong-theme effect; it MUST NOT read tab-related data because tabs do not persist).
   - `@codemirror/state` and `@codemirror/view` may newly appear in `src/App.tsx` (the `EditorState` and `EditorHandle` types are imported) and in `src/components/Editor.tsx` (the existing importer). No other module should pull in CodeMirror types.
 
   Use `Grep` for `@tauri-apps/plugin-fs|@tauri-apps/plugin-dialog|@tauri-apps/api/webviewWindow` across `src/`, a separate grep for `localStorage` across `src/` and `index.html`, and a third grep for `@codemirror/(state|view)` across `src/`. Any extra match is a chokepoint violation to fix.

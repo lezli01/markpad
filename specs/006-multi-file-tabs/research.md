@@ -371,7 +371,7 @@ These are intentionally **not** addressed in this feature; planning here ensures
 
 - **Restore previous session's tabs on launch / persist tabs across launches**: out of scope. Each launch returns to the empty state. Listed as a candidate follow-up in spec Assumptions.
 - **Drag-to-reorder tabs**: out of scope. Tab order is insertion order; closing a tab leaves the remaining tabs in their existing order. Listed as a candidate follow-up.
-- **Detach a tab into a separate window / drag a tab between two MILF windows**: out of scope.
+- **Detach a tab into a separate window / drag a tab between two markpad windows**: out of scope.
 - **Keyboard shortcuts for tab operations (Ctrl+Tab cycle, Ctrl+W close, Ctrl+Shift+T reopen, Ctrl+1..9 jump-to-tab)**: not required by spec FR-025; candidates for a follow-up. The existing Ctrl/Cmd+S / N / O shortcuts from Feature 004 continue to act on the active tab.
 - **Reload from disk / detect external file changes / file watch**: out of scope. Re-opening an already-open file re-focuses the existing tab and preserves its unsaved edits (FR-011).
 - **Recent files list / recently closed tabs**: out of scope.

@@ -49,7 +49,7 @@ These steps map directly to the "UI acceptance contract" in `contracts/component
 
 1. **Initial render** — Launch the app. Confirm:
    - No Tauri / Vite / React logos appear.
-   - The window title is "MILF" (not "Tauri + React + Typescript").
+   - The window title is "markpad" (not "Tauri + React + Typescript").
    - Two rounded "island" panes are visible: Editor on the left, Preview on the right, each with a small label.
    - Starter markdown is in the Editor; the Preview shows it rendered with heading, bold, list, link, and inline code visible.
 

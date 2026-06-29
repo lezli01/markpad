@@ -24,7 +24,7 @@ The callback receives `(AppHandle, Vec<String>, String)` — the second invocati
 - **Roll our own lock file + Unix-socket IPC**: write a lock file in app-data, IPC via a domain socket / named pipe to deliver argv, handle stale-lock cleanup on crash. Materially more code (hundreds of lines per platform), more failure modes (stale lock files trap users), more security surface (named pipe permissions, socket file modes). Rejected.
 - **Use the OS-level "is process X running" check (psutil-style)**: race conditions galore — checking and locking aren't atomic. Rejected.
 - **Skip single-instance and let multiple windows happen**: spec explicitly forbids (FR-005). Rejected.
-- **`tauri-plugin-deep-link`**: solves a different problem (custom URL scheme `milf://...` routing). We need file-path routing, not URL routing. Rejected.
+- **`tauri-plugin-deep-link`**: solves a different problem (custom URL scheme `markpad://...` routing). We need file-path routing, not URL routing. Rejected.
 
 **Implementation notes**:
 - Add `tauri-plugin-single-instance = "2"` to `src-tauri/Cargo.toml` under `[dependencies]`.
@@ -51,7 +51,7 @@ The callback receives `(AppHandle, Vec<String>, String)` — the second invocati
 - `ingest_initial_args(app: &AppHandle, argv: Vec<String>)` is called once from the `setup` callback. It calls `route_paths(app, canonicalize_args(&cwd, argv.into_iter().skip(1)))`, where `cwd = std::env::current_dir().ok()`.
 - Cold-start argv on most OSes includes `argv[0]` = the executable path; we skip it.
 - The single-instance callback receives the second-invocation `argv` and `cwd` already separated; we don't skip there because the plugin's contract is that argv contains only the actual arguments (no `argv[0]`). [Note for implementers: verify this against the plugin's docs at integration time — if it includes argv[0], add the `.skip(1)`.]
-- Arguments that look like flags (`--something`) are passed through as paths today. Per spec Assumption 12, flag handling is out of scope. If a user runs `milf --version foo.md`, today's behavior would attempt to open a file named `--version` (which doesn't exist → silently skipped per FR-012) and then open `foo.md`. That's acceptable. A future feature can add proper flag handling.
+- Arguments that look like flags (`--something`) are passed through as paths today. Per spec Assumption 12, flag handling is out of scope. If a user runs `markpad --version foo.md`, today's behavior would attempt to open a file named `--version` (which doesn't exist → silently skipped per FR-012) and then open `foo.md`. That's acceptable. A future feature can add proper flag handling.
 
 ---
 
@@ -75,7 +75,7 @@ The callback receives `(AppHandle, Vec<String>, String)` — the second invocati
 **Rationale**:
 - Tauri 2 provides this exact config key specifically to abstract over the three OSes' file-association mechanisms.
 - The user does NOT need to manually edit registry entries / `Info.plist` / `.desktop` files; the installer generates them.
-- The user IS still responsible for *choosing* MILF as the default handler via OS settings (spec Assumption 1) — the manifest only advertises that MILF *can* handle `.md`. This matches macOS's "Get Info → Open With" model, Windows's "Open With → Choose another app → Always use", and Linux's `xdg-mime default`. The spec is explicit that registration UX is out of scope.
+- The user IS still responsible for *choosing* markpad as the default handler via OS settings (spec Assumption 1) — the manifest only advertises that markpad *can* handle `.md`. This matches macOS's "Get Info → Open With" model, Windows's "Open With → Choose another app → Always use", and Linux's `xdg-mime default`. The spec is explicit that registration UX is out of scope.
 - Including `markdown` (the long extension) alongside `md` matches the existing Open dialog filter in `fileOpen.ts:58-59` (`extensions: ["md", "markdown"]`).
 
 **Alternatives considered**:
@@ -85,7 +85,7 @@ The callback receives `(AppHandle, Vec<String>, String)` — the second invocati
 
 **Implementation notes**:
 - The change is one config block; no Rust or TS code is needed to make the OS aware of the association.
-- After this change, the user runs `npm run tauri build` to produce a bundled installer that registers the association. Running `npm run tauri dev` does NOT register the association (dev builds aren't installed into the OS); manual testing on dev builds requires either invoking `milf path/to/file.md` from a shell (CLI args path) or running the installed release build.
+- After this change, the user runs `npm run tauri build` to produce a bundled installer that registers the association. Running `npm run tauri dev` does NOT register the association (dev builds aren't installed into the OS); manual testing on dev builds requires either invoking `markpad path/to/file.md` from a shell (CLI args path) or running the installed release build.
 - Adding new extensions later is one line in the array.
 - The `name` and `description` fields are user-visible in OS settings ("Default apps" → "Markdown document").
 - Linux: the generated `.desktop` includes `MimeType=text/markdown;text/x-markdown;` (Tauri infers from the extension list). Verify on a Linux integration test that `xdg-mime` recognizes the association.
@@ -98,16 +98,16 @@ The callback receives `(AppHandle, Vec<String>, String)` — the second invocati
 
 | Source | Rust entry point | Used for |
 |---|---|---|
-| Cold-start CLI args (Windows / Linux / macOS) | `setup` hook calls `ingest_initial_args(app, std::env::args().collect())` | First process launches with `milf foo.md` from shell, or via Windows/Linux file-association double-click (file path is in argv) |
-| macOS file activation (cold start and hot) | `RunEvent::Opened { urls }` handler in the `.run(callback)` closure calls `handle_opened_urls(app, urls)` | macOS-specific: Finder double-click on a `.md` against a running or launching MILF; `NSApplicationOpenURLs` event |
-| Second-invocation handoff (all OSes) | `tauri_plugin_single_instance::init(callback)` → `handle_second_invocation(app, argv, cwd)` | `milf foo.md` invoked while MILF is already running; Windows/Linux file-association double-click against an already-running MILF |
+| Cold-start CLI args (Windows / Linux / macOS) | `setup` hook calls `ingest_initial_args(app, std::env::args().collect())` | First process launches with `markpad foo.md` from shell, or via Windows/Linux file-association double-click (file path is in argv) |
+| macOS file activation (cold start and hot) | `RunEvent::Opened { urls }` handler in the `.run(callback)` closure calls `handle_opened_urls(app, urls)` | macOS-specific: Finder double-click on a `.md` against a running or launching markpad; `NSApplicationOpenURLs` event |
+| Second-invocation handoff (all OSes) | `tauri_plugin_single_instance::init(callback)` → `handle_second_invocation(app, argv, cwd)` | `markpad foo.md` invoked while markpad is already running; Windows/Linux file-association double-click against an already-running markpad |
 
 All three converge in `route_paths(app: &AppHandle, paths: Vec<PathBuf>)` which:
 1. Calls `bring_to_front(app)` — `unminimize` + `show` + `set_focus` on the main window. (No-op for the cold-start case where the window is still being created; the window will show on its own.) For the second-invocation case, this is what actually raises the window per FR-007.
 2. If `frontend_ready` is false: push paths into `pending: Mutex<Vec<PathBuf>>`. The frontend will drain them on mount via `get_pending_files()`.
-3. If `frontend_ready` is true: emit `milf://open-files` with payload `{ paths: paths.into_iter().map(|p| p.to_string_lossy().into_owned()).collect::<Vec<_>>() }`. The frontend's live subscription handles them.
+3. If `frontend_ready` is true: emit `markpad://open-files` with payload `{ paths: paths.into_iter().map(|p| p.to_string_lossy().into_owned()).collect::<Vec<_>>() }`. The frontend's live subscription handles them.
 
-The frontend has exactly ONE handler for "open these paths as tabs", called from two contexts: the mount-time `getPendingFiles()` drain, and the live `milf://open-files` event. The handler:
+The frontend has exactly ONE handler for "open these paths as tabs", called from two contexts: the mount-time `getPendingFiles()` drain, and the live `markpad://open-files` event. The handler:
 1. For each path, calls `openMarkdownFileByPath(path)` (new `fileOpen.ts` export — reads the file via `readTextFile`, returns the same `OpenResult` shape the existing `openMarkdownFile()` uses).
 2. For each `kind: "ok"` result, applies the Feature 006 dedup-or-append logic: if a tab with that path already exists → activate it; else append a new tab.
 3. For `kind: "error"` results when the caller is session-restore or pending-files: silently skip (FR-012 / FR-016 — no error banner).
@@ -135,7 +135,7 @@ The frontend has exactly ONE handler for "open these paths as tabs", called from
   4. Release the lock.
   5. Return the drained `Vec`.
   Anything that arrives during step 1-4 is added to the buffer and IS returned in this call (because it was added before the take). Anything that arrives after the lock is released is processed via emit (because `frontend_ready` is now true).
-- The frontend subscribes to `milf://open-files` BEFORE calling `get_pending_files()`. That way, any event that fires between subscribe and drain is queued by Tauri's event system rather than dropped. (Tauri's event listeners buffer events for the same window after they're registered; they don't lose events that fire while a handler is awaiting another promise.)
+- The frontend subscribes to `markpad://open-files` BEFORE calling `get_pending_files()`. That way, any event that fires between subscribe and drain is queued by Tauri's event system rather than dropped. (Tauri's event listeners buffer events for the same window after they're registered; they don't lose events that fire while a handler is awaiting another promise.)
 - The event payload is JSON-serializable (`{ paths: string[] }`) — Tauri's `emit` handles serialization. Paths are sent as strings (UTF-8); paths that aren't valid UTF-8 on the underlying filesystem use `to_string_lossy` (one of the rare cases where lossy conversion is acceptable — the alternative is to filter them out, but on the three desktop OSes valid UTF-8 paths are overwhelmingly the norm and a path that round-trips losslessly through display is what the user provided).
 
 ---
@@ -159,7 +159,7 @@ On macOS, the URLs from `RunEvent::Opened` arrive as `url::Url` values — `Url:
 **Rationale**:
 - FR-010 explicitly requires that relative paths resolve against the invoking shell's cwd. The single-instance plugin gives us the second invocation's `cwd` (not the first instance's), so the resolution is correct for hand-off args. For cold-start args, `std::env::current_dir()` in `setup` is the right cwd.
 - Doing this in Rust lets us drop unresolvable paths before they hit the IPC, so the frontend's "open these paths" code never has to think about "does this exist?" — every path that arrives is guaranteed to exist at the moment of dispatch.
-- `canonicalize` resolving symlinks is a small bonus: two `milf` invocations passing the same logical file via different symlink paths produce the same canonical path, which makes the Feature 006 dedup-by-path work correctly.
+- `canonicalize` resolving symlinks is a small bonus: two `markpad` invocations passing the same logical file via different symlink paths produce the same canonical path, which makes the Feature 006 dedup-by-path work correctly.
 - Case-insensitivity (Windows + APFS-case-insensitive macOS) is NOT handled — `canonicalize` returns the path in its on-disk casing, which means two opens of the same file with different-cased paths produce the same canonical path on case-insensitive FS, the same way Feature 006 §2 documented for Open-dialog paths. On Linux's case-sensitive FS, `Foo.md` and `foo.md` are different files and get different tabs — correct behavior.
 
 **Alternatives considered**:
@@ -290,7 +290,7 @@ async function openPathsAsTabs(paths: string[], options: { source: "session" | "
 }
 ```
 
-Note the `source` flag: session-restore and cold-start drain MUST be silent on failure; live handoffs (the user just double-clicked a `.md` from Finder against an already-running MILF) MAY surface an error banner because the user has just-recently performed an action and should know it didn't work. This is a deliberate, narrow exception to the otherwise-uniform silent-skip rule, justified by user expectations.
+Note the `source` flag: session-restore and cold-start drain MUST be silent on failure; live handoffs (the user just double-clicked a `.md` from Finder against an already-running markpad) MAY surface an error banner because the user has just-recently performed an action and should know it didn't work. This is a deliberate, narrow exception to the otherwise-uniform silent-skip rule, justified by user expectations.
 
 **Rationale**:
 - One mount effect, one open-paths handler — minimal surface area in `App.tsx`. The complexity is in the order, not the shape.
@@ -488,7 +488,7 @@ All three calls are best-effort; the order is intentional (`unminimize` before `
 
 ## 12. Frontend live event subscription — `@tauri-apps/api/event`
 
-**Decision**: The frontend subscribes to the `milf://open-files` event via `@tauri-apps/api/event`'s `listen` function:
+**Decision**: The frontend subscribes to the `markpad://open-files` event via `@tauri-apps/api/event`'s `listen` function:
 
 ```ts
 // In src/lib/launchFiles.ts
@@ -499,7 +499,7 @@ export type OpenFilesPayload = { paths: string[] };
 export async function subscribeToOpenFiles(
   handler: (paths: string[]) => void,
 ): Promise<UnlistenFn> {
-  return listen<OpenFilesPayload>("milf://open-files", (event) => {
+  return listen<OpenFilesPayload>("markpad://open-files", (event) => {
     handler(event.payload.paths);
   });
 }
@@ -509,7 +509,7 @@ export async function getPendingFiles(): Promise<string[]> {
 }
 ```
 
-The event name `"milf://open-files"` uses a "scheme-like" prefix to namespace MILF events from any other future events. Tauri does not require a particular naming convention; we adopt one for grep-ability.
+The event name `"markpad://open-files"` uses a "scheme-like" prefix to namespace markpad events from any other future events. Tauri does not require a particular naming convention; we adopt one for grep-ability.
 
 **Rationale**:
 - `listen` is the canonical pattern for Rust → frontend push.
@@ -517,14 +517,14 @@ The event name `"milf://open-files"` uses a "scheme-like" prefix to namespace MI
 - Wrapping `invoke("get_pending_files")` in a typed helper means `App.tsx` doesn't import `@tauri-apps/api/core` directly — same chokepoint rule that `fileOpen.ts` follows for the dialog and fs plugins.
 
 **Alternatives considered**:
-- **Use `WebviewWindow::listen` instead of `listen`**: the latter is window-agnostic and works in our single-window app. Window-scoped listen would be needed if MILF had multiple windows (it does not, by design).
+- **Use `WebviewWindow::listen` instead of `listen`**: the latter is window-agnostic and works in our single-window app. Window-scoped listen would be needed if markpad had multiple windows (it does not, by design).
 - **Use a custom event emitter (e.g., a `BroadcastChannel`)**: doesn't bridge to the Rust side.
 - **Poll via `getPendingFiles()` on a timer**: extra timer, extra cost, extra latency. Rejected.
 
 **Implementation notes**:
 - `listen` resolves to `UnlistenFn` which is itself a function — call it to unsubscribe.
 - In React StrictMode, the mount effect runs twice. The first cleanup unsubscribes the first listener; the second mount creates a second listener. Events that fire during the brief no-listener gap (between cleanup and re-subscribe) would be lost in theory, but the mount effect runs synchronously enough that this gap is microseconds and the user can't trigger an OS event that fast.
-- Event payloads are JSON; `paths: string[]` is the only field. The Rust side emits via `app.emit("milf://open-files", json!({ "paths": paths }))`.
+- Event payloads are JSON; `paths: string[]` is the only field. The Rust side emits via `app.emit("markpad://open-files", json!({ "paths": paths }))`.
 
 ---
 
@@ -537,8 +537,8 @@ These are intentionally **not** addressed in this feature; planning here ensures
 - **Multiple windows / `--new-window` flag / detach tab into new window**: out of scope per spec Assumption 12. The whole feature design assumes one window per user session.
 - **Per-tab view modes** (one tab in editor-only, another in split): out of scope per Feature 006 carry-over.
 - **Recent files menu / recently closed tabs**: out of scope.
-- **File watch / reload from disk on external change**: out of scope. Re-opening an already-open file uses the existing tab (FR-023). External changes to a file currently open in MILF are invisible until the user closes and reopens.
-- **Custom URL scheme handling (e.g., `milf://...` deep links)**: out of scope; the spec is only about file paths. The launch-files pipeline could later be extended to accept URL routes by adding a fourth entry point that calls `route_paths` after URL→path translation.
+- **File watch / reload from disk on external change**: out of scope. Re-opening an already-open file uses the existing tab (FR-023). External changes to a file currently open in markpad are invisible until the user closes and reopens.
+- **Custom URL scheme handling (e.g., `markpad://...` deep links)**: out of scope; the spec is only about file paths. The launch-files pipeline could later be extended to accept URL routes by adding a fourth entry point that calls `route_paths` after URL→path translation.
 - **CLI flags** (`--help`, `--version`, `--no-session`, `--new-window`): out of scope per spec Assumption 12. Positional arguments only.
 - **Session record migration to a new schema version**: not needed at v1. The `version: 1` field plus the corruption-tolerance return-empty branch makes future migration mechanical.
 - **Window size / position persistence**: out of scope. The spec is about *what files were open*, not *how the window was sized*. Could be a follow-up via `tauri-plugin-window-state`.

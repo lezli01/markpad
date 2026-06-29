@@ -1,6 +1,6 @@
 # Phase 1 — Component Contracts
 
-MILF's primary external interface is its UI. There is no public library API, no HTTP endpoint, and no custom Tauri command in this feature. The contracts below define the React component boundaries so the tasks phase has unambiguous "shapes" to implement against.
+markpad's primary external interface is its UI. There is no public library API, no HTTP endpoint, and no custom Tauri command in this feature. The contracts below define the React component boundaries so the tasks phase has unambiguous "shapes" to implement against.
 
 ## Conventions
 

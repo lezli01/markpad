@@ -9,7 +9,7 @@ The test files referenced below — `notes.md`, `readme.md`, `meeting.md` — ar
 ## Setup
 
 1. Pull the branch and install: `npm install && npm run tauri dev`.
-2. Start with no MILF state: open the platform's app-data folder for MILF if you want to inspect `localStorage`, but no cleanup is required — this feature does not persist tabs.
+2. Start with no markpad state: open the platform's app-data folder for markpad if you want to inspect `localStorage`, but no cleanup is required — this feature does not persist tabs.
 3. Have three small markdown files ready on disk: `notes.md`, `readme.md`, `meeting.md`. Each ≤ 100 KB.
 
 ---
@@ -18,7 +18,7 @@ The test files referenced below — `notes.md`, `readme.md`, `meeting.md` — ar
 
 Covers **FR-001 to FR-012**, **FR-019**, **FR-020**, **FR-025**, **SC-001 to SC-004**, **SC-008**.
 
-1. Launch MILF. **Expect**: workspace shows an empty TabStrip band (faded "No files open" or equivalent), empty editor, empty preview, Save button disabled, auto-save checkbox visible.  
+1. Launch markpad. **Expect**: workspace shows an empty TabStrip band (faded "No files open" or equivalent), empty editor, empty preview, Save button disabled, auto-save checkbox visible.  
    → FR-003.
 2. Click **Open**, select `notes.md`. **Expect**: a tab appears with the title `notes.md`, the editor shows the file's text, the preview renders it, the tab is visually highlighted as active.  
    → FR-005, FR-006, FR-011 (insertion), Story 1 AS-1.
@@ -61,7 +61,7 @@ Covers **FR-013 to FR-018**, **SC-005**, **SC-006**.
     → FR-016 (discard branch), FR-017 (neighbor activation), Story 2 AS-4 / AS-6.
 18. Reopen `readme.md` (Open → readme.md). Type a change. Click × → **Save**. **Expect**: the change is written to disk; the dialog closes; the tab is removed; active tab moves to the remaining neighbor.  
     → FR-016 (save branch), Story 2 AS-3, FR-017.
-19. **Save-failure case**: make `notes.md` read-only externally (chmod / Properties → Read-only / move it to a write-protected volume), then reopen it in MILF, type a change, click × → Save. **Expect**: the dialog closes briefly OR stays open while the save attempts; the save fails; an error banner appears naming `notes.md`; the tab and its asterisk remain (NOT removed).  
+19. **Save-failure case**: make `notes.md` read-only externally (chmod / Properties → Read-only / move it to a write-protected volume), then reopen it in markpad, type a change, click × → Save. **Expect**: the dialog closes briefly OR stays open while the save attempts; the save fails; an error banner appears naming `notes.md`; the tab and its asterisk remain (NOT removed).  
     → FR-016 (save-failure leaves the tab), FR-021 (error attributed to the tab).  
     Then restore write permission and Save manually to clean up before continuing.
 20. Now close the last remaining tab via ×. **Expect**: the workspace returns to the empty state (empty TabStrip band, empty editor, empty preview, Save disabled). The auto-save checkbox remains visible and its setting remains intact.  
@@ -79,17 +79,17 @@ Covers **FR-007**, **FR-008**, **FR-009**, **FR-010**, **FR-023**, **FR-024**, *
 
 23. From any state, look at the workspace chrome. **Expect**: there is NO standalone "file name with asterisk" header above the Toolbar. The TabStrip is the only in-workspace surface that shows the active file's name.  
     → FR-023, Story 3 AS-1, SC-009.
-24. Look at the OS window title (the title bar of the OS window itself). **Expect**: it shows `<active-tab-name> — MILF` when a tab is active, and `MILF` when no tabs are open. (This is Feature 003's window-title behaviour and should still work.)  
+24. Look at the OS window title (the title bar of the OS window itself). **Expect**: it shows `<active-tab-name> — markpad` when a tab is active, and `markpad` when no tabs are open. (This is Feature 003's window-title behaviour and should still work.)  
     → FR-024.
 25. With multiple tabs, identify the active tab visually. **Expect**: the active pill has a different background or accent than the others; you can tell at a glance which tab the editor is showing.  
     → FR-005, Story 3 AS-2.
 26. Pick a markdown file with a *very long* filename (rename one if needed to e.g. `extremely-long-filename-that-should-truncate-in-a-pill.md`). Open it. **Expect**: the tab title is truncated with ellipsis inside the pill. Hover the pill → a tooltip shows the full file name or path.  
     → FR-008, Story 3 AS-4.
-27. Open enough tabs to exceed the workspace width (≥ 8 tabs on a narrow window — resize the MILF window narrower if needed). **Expect**: the TabStrip becomes horizontally scrollable. No tab disappears silently; you can scroll to reach any tab.  
+27. Open enough tabs to exceed the workspace width (≥ 8 tabs on a narrow window — resize the markpad window narrower if needed). **Expect**: the TabStrip becomes horizontally scrollable. No tab disappears silently; you can scroll to reach any tab.  
     → FR-010.
 28. Switch view modes (editor only, preview only, split — Toolbar). **Expect**: the TabStrip remains visible and the active pill stays highlighted in every mode.  
     → FR-009, Story 3 AS-5.
-29. Resize the MILF window from wide to narrow and back. **Expect**: at all sizes the TabStrip is usable; horizontal scroll appears as needed; the active pill auto-scrolls into view if its position requires it.  
+29. Resize the markpad window from wide to narrow and back. **Expect**: at all sizes the TabStrip is usable; horizontal scroll appears as needed; the active pill auto-scrolls into view if its position requires it.  
     → FR-010, plus Feature 002 responsive carry-over.
 
 ---
@@ -106,7 +106,7 @@ Covers **Edge Cases** in the spec, plus carry-over checks.
     → spec Edge Cases (auto-save in flight + close); FR-022.
 33. **XSS regression** (Constitution Principle VII): create a markdown file containing `<script>alert('xss')</script>` and `<img src=x onerror=alert(1)>`. Open it in one tab. Switch to another tab and back. **Expect**: no alert ever fires; the script and onerror are stripped from the preview by DOMPurify.  
     → Feature 002 / 003 carry-over; tab switching does not regress sanitisation.
-34. **Auto-save preference persists across launches**: tick auto-save in one session, quit MILF (`Cmd/Ctrl+Q` or close window), relaunch. **Expect**: the auto-save checkbox is still ticked. (Carry-over check from Feature 004.)
+34. **Auto-save preference persists across launches**: tick auto-save in one session, quit markpad (`Cmd/Ctrl+Q` or close window), relaunch. **Expect**: the auto-save checkbox is still ticked. (Carry-over check from Feature 004.)
 35. **Theme + view mode preferences persist across launches**: same as 34 for theme and view mode.
 36. **Editor stays mounted across view-mode switches** (Feature 003 §3 carry-over): type half a word in the editor (don't pause), click the view-mode segmented control to switch modes once, return to a mode that includes the editor. **Expect**: no keystroke was lost; the cursor is still in place.
 37. **Untitled tab via New button** (the deliberate scope extension; see plan.md Complexity Tracking row): click New. **Expect**: a new tab appears with the title `Untitled-1` (or `Untitled-N` if other untitled tabs already exist), active, with empty editor. Type a character → asterisk appears. Click Save → a Save-As dialog appears. Pick a path. **Expect**: after saving, the tab's title changes to the basename of the saved path; the asterisk clears. Subsequent Save uses the new path without prompting.  

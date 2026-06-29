@@ -89,7 +89,7 @@ This is the simplest correct mutex for a single-renderer webview with at most tw
 
 ## 4. Persisting the auto-save preference
 
-**Decision**: Store under `localStorage["milf.autoSave"]` as the string `"on"` or `"off"`. Reuse the `preferences.ts` module: add `getAutoSave(): boolean` and `setAutoSave(on: boolean): void`. Default is `false` ("off") for first-launch and for any unreadable / unrecognised stored value, per FR-019 and FR-020. The exposed type is `boolean` (cleaner caller API); the on-disk encoding is `"on" / "off"` (cleaner human-debuggable storage and matches the existing pattern of writing string enums, not booleans).
+**Decision**: Store under `localStorage["markpad.autoSave"]` as the string `"on"` or `"off"`. Reuse the `preferences.ts` module: add `getAutoSave(): boolean` and `setAutoSave(on: boolean): void`. Default is `false` ("off") for first-launch and for any unreadable / unrecognised stored value, per FR-019 and FR-020. The exposed type is `boolean` (cleaner caller API); the on-disk encoding is `"on" / "off"` (cleaner human-debuggable storage and matches the existing pattern of writing string enums, not booleans).
 
 **Rationale**:
 - Reusing `preferences.ts` is mandated by Principle VIII (single chokepoint for `localStorage`) and by the existing module comment. Adding a third preference is one short function pair; no new file.
@@ -105,7 +105,7 @@ This is the simplest correct mutex for a single-renderer webview with at most tw
 **Implementation notes**:
 - `preferences.ts` gains:
   ```ts
-  const AUTO_SAVE_KEY = "milf.autoSave";
+  const AUTO_SAVE_KEY = "markpad.autoSave";
   const ALLOWED_AUTO_SAVE = ["on", "off"] as const;
 
   export function getAutoSave(): boolean {
@@ -299,7 +299,7 @@ This is the simplest correct mutex for a single-renderer webview with at most tw
 These are intentionally **not** addressed in this feature; planning here ensures the tasks phase does not silently expand scope:
 
 - **Save As / Save a Copy / "save to a different path"**: out of scope. Save always writes to the path Open returned.
-- **New file from inside MILF / "create a fresh document"**: out of scope. The Save control is unavailable until a file is opened via Feature 003.
+- **New file from inside markpad / "create a fresh document"**: out of scope. The Save control is unavailable until a file is opened via Feature 003.
 - **Prompt-on-quit when there are unsaved edits / save-on-blur / save-on-view-mode-switch**: out of scope. Auto-save fires only on idle.
 - **Crash recovery / automatic backups / atomic write via temp file**: out of scope. The user is responsible for saving (or enabling auto-save) before quitting.
 - **Detecting external file changes / "reload from disk" / file watch**: out of scope. The next save trusts the path Open returned; if the file moved or was modified by another program, save fails through the standard error path.

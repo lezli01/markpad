@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "milf",
+  "productName": "markpad",
   "version": "0.5.0",
-  "identifier": "dev.is-a.lezli01.milf",
+  "identifier": "dev.is-a.lezli01.markpad",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "MILF",
+        "title": "markpad",
         "width": 1200,
         "height": 800
       }

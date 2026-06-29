@@ -78,11 +78,11 @@ The ordered collection of all currently open tabs plus the active-tab pointer.
 
 | Key in `localStorage`  | Type                                    | Default |
 |------------------------|------------------------------------------|---------|
-| `milf.theme`           | `"light" \| "dark"`                      | System preference; falls back to `"light"`. |
-| `milf.viewMode`        | `"editor" \| "preview" \| "split"`       | `"split"`. |
-| `milf.autoSave`        | `"on" \| "off"` (exposed as `boolean`)   | `false`. |
+| `markpad.theme`           | `"light" \| "dark"`                      | System preference; falls back to `"light"`. |
+| `markpad.viewMode`        | `"editor" \| "preview" \| "split"`       | `"split"`. |
+| `markpad.autoSave`        | `"on" \| "off"` (exposed as `boolean`)   | `false`. |
 
-This feature does NOT add a new preference. Tabs are not persisted. The `milf.viewMode` and `milf.autoSave` keys continue to live at the workspace level (one setting shared across all tabs).
+This feature does NOT add a new preference. Tabs are not persisted. The `markpad.viewMode` and `markpad.autoSave` keys continue to live at the workspace level (one setting shared across all tabs).
 
 ---
 

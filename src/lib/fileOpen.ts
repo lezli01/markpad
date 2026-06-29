@@ -5,7 +5,7 @@
 //
 // Companion chokepoints (added in Feature 007):
 //   - src/lib/session.ts        owns load_session / save_session
-//   - src/lib/launchFiles.ts    owns get_pending_files + milf://open-files event
+//   - src/lib/launchFiles.ts    owns get_pending_files + markpad://open-files event
 //
 // Note: openMarkdownFileByPath reads via the Rust `read_text_file_by_path`
 // command rather than the fs plugin's readTextFile because programmatic paths
@@ -179,7 +179,7 @@ export async function saveMarkdownFileAs(
 export async function setWindowTitle(fileName: string | null): Promise<void> {
   try {
     const win = getCurrentWebviewWindow();
-    await win.setTitle(fileName ? `${fileName} — MILF` : "MILF");
+    await win.setTitle(fileName ? `${fileName} — markpad` : "markpad");
   } catch (err) {
     console.warn("Failed to set window title:", err);
   }

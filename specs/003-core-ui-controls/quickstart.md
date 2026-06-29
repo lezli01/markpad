@@ -74,7 +74,7 @@ These steps map directly to the "UI acceptance contract" in `contracts/component
 2. **Happy path (FR-001–FR-004, FR-007, SC-001)** — Click **Open**. In the native dialog, navigate to your Desktop, observe that `mvp-test.md` is visible by default (filter is set to Markdown). Pick `mvp-test.md` and confirm:
    - The Editor's content is replaced by the file's text.
    - The Preview shows the rendered output (heading, bold, italic, list, link).
-   - The OS window title now reads `mvp-test.md — MILF`.
+   - The OS window title now reads `mvp-test.md — markpad`.
    - The entire operation completes in well under 2 seconds.
 
 3. **Cancel (FR-005, US1 Acceptance Scenario 2)** — Edit the editor a bit. Click **Open**. In the dialog, hit Cancel. Confirm the editor and preview are exactly as they were before the click; no error appears.
@@ -90,7 +90,7 @@ These steps map directly to the "UI acceptance contract" in `contracts/component
 6. **Recovery (US1 Acceptance Scenario 3)** — Click **Open** again, pick `mvp-test.md` normally. Confirm:
    - The editor + preview update with the file content.
    - Any previous error banner is cleared automatically (not just dismissed).
-   - The window title updates to `mvp-test.md — MILF`.
+   - The window title updates to `mvp-test.md — markpad`.
 
 ### User Story 2 — Choose how the workspace is laid out (P2)
 
@@ -119,13 +119,13 @@ These steps map directly to the "UI acceptance contract" in `contracts/component
 11. **Persistence (FR-018–FR-019, SC-006, US2 AS5, US3 AS3)** — With theme = dark and viewMode = preview-only, close the application completely and reopen it. Confirm:
     - The app opens directly in dark theme and preview-only mode.
     - Starter content is back in the editor (the previously opened file is NOT restored — out of scope).
-    - The OS window title is `MILF` (no file loaded).
+    - The OS window title is `markpad` (no file loaded).
 
-12. **First-launch system preference (FR-016, US3 AS4)** — Quit the app. Manually delete `milf.theme` from the app's local storage (via Tauri devtools: right-click → Inspect Element → Application → Local Storage → delete the `milf.theme` key). Set your OS to dark mode. Relaunch the app and confirm it opens in dark theme. Repeat with OS in light mode and confirm it opens in light theme.
+12. **First-launch system preference (FR-016, US3 AS4)** — Quit the app. Manually delete `markpad.theme` from the app's local storage (via Tauri devtools: right-click → Inspect Element → Application → Local Storage → delete the `markpad.theme` key). Set your OS to dark mode. Relaunch the app and confirm it opens in dark theme. Repeat with OS in light mode and confirm it opens in light theme.
 
 ### Cross-cutting
 
-13. **Discoverability (FR-021, SC-007)** — Imagine you have never seen MILF before. Without touching the keyboard, can you locate, in under 30 seconds, the controls to (a) open a file, (b) change the view mode, (c) change the theme? All three should be visible in the toolbar from the moment the app launches.
+13. **Discoverability (FR-021, SC-007)** — Imagine you have never seen markpad before. Without touching the keyboard, can you locate, in under 30 seconds, the controls to (a) open a file, (b) change the view mode, (c) change the theme? All three should be visible in the toolbar from the moment the app launches.
 
 14. **Sanitizer still holds (Constitution VII; regression check)** — Open a markdown file that contains:
     ```markdown

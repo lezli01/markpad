@@ -48,13 +48,13 @@ Single-project layout (Tauri 2 + React + TypeScript + Vite):
 
 - [X] T002 [P] Add a new `openMarkdownFileByPath(path: string): Promise<OpenResult>` export to `src/lib/fileOpen.ts` per [contracts/frontend-modules.md §3](contracts/frontend-modules.md). The implementation mirrors `openMarkdownFile()` minus the dialog step: validate non-empty string, call `readTextFile(path)`, return `{ kind: "ok", name: basename(path), path, content }` on success or `{ kind: "error", message: friendlyMessage(err) }` on failure. Also update the top-of-file chokepoint comment to cross-reference the two new companion chokepoints (`src/lib/session.ts` and `src/lib/launchFiles.ts`) so grep-by-purpose still works.
 
-- [X] T003 [P] Create `src/lib/launchFiles.ts` per [contracts/frontend-modules.md §2](contracts/frontend-modules.md) and [contracts/tauri-interface.md §3 + §4](contracts/tauri-interface.md). Exports: `OpenFilesPayload` type (`{ paths: string[] }`); `getPendingFiles(): Promise<string[]>` wrapping `invoke<string[]>("get_pending_files")` with an error-swallowing try/catch returning `[]` on failure; `subscribeToOpenFiles(handler: (paths: string[]) => void): Promise<UnlistenFn>` wrapping `listen<OpenFilesPayload>("milf://open-files", evt => handler(evt.payload.paths))`. Include the module-level chokepoint comment from the contract.
+- [X] T003 [P] Create `src/lib/launchFiles.ts` per [contracts/frontend-modules.md §2](contracts/frontend-modules.md) and [contracts/tauri-interface.md §3 + §4](contracts/tauri-interface.md). Exports: `OpenFilesPayload` type (`{ paths: string[] }`); `getPendingFiles(): Promise<string[]>` wrapping `invoke<string[]>("get_pending_files")` with an error-swallowing try/catch returning `[]` on failure; `subscribeToOpenFiles(handler: (paths: string[]) => void): Promise<UnlistenFn>` wrapping `listen<OpenFilesPayload>("markpad://open-files", evt => handler(evt.payload.paths))`. Include the module-level chokepoint comment from the contract.
 
 - [X] T004 [P] Create `src-tauri/src/launch_files.rs` per [contracts/tauri-interface.md §3, §4, §5](contracts/tauri-interface.md) and [research.md §4, §5, §11](research.md). This file is created with the SHARED helpers only — US1/US2/US3 each add their own source-specific function in later phases. Implement:
   - `pub struct LaunchFilesState { pub pending: Mutex<Vec<PathBuf>>, pub frontend_ready: AtomicBool }` with a `Default` impl.
   - `fn canonicalize_arg(cwd: &Path, arg: &str) -> Option<PathBuf>` — joins `cwd` + relative `arg` (or uses absolute as-is), calls `.canonicalize().ok()` so non-existent / unresolvable paths return `None`.
   - `fn bring_to_front(app: &tauri::AppHandle)` — `if let Some(window) = app.get_webview_window("main") { let _ = window.unminimize(); let _ = window.show(); let _ = window.set_focus(); }`. Errors silenced (best-effort per spec Assumption 3).
-  - `fn route_paths(app: &tauri::AppHandle, paths: Vec<PathBuf>)` — short-circuit on empty input; call `bring_to_front(app)`; acquire the `pending` lock; if `frontend_ready.load(SeqCst)` then drop the lock and `app.emit("milf://open-files", json!({"paths": paths.iter().map(|p| p.to_string_lossy().into_owned()).collect::<Vec<_>>()}))`; else extend `pending` with the paths.
+  - `fn route_paths(app: &tauri::AppHandle, paths: Vec<PathBuf>)` — short-circuit on empty input; call `bring_to_front(app)`; acquire the `pending` lock; if `frontend_ready.load(SeqCst)` then drop the lock and `app.emit("markpad://open-files", json!({"paths": paths.iter().map(|p| p.to_string_lossy().into_owned()).collect::<Vec<_>>()}))`; else extend `pending` with the paths.
   - `#[tauri::command] pub async fn get_pending_files(state: tauri::State<'_, LaunchFilesState>) -> Result<Vec<String>, String>` — acquire `pending` lock; `std::mem::take` the inner `Vec`; set `frontend_ready.store(true, SeqCst)` while still under the lock; release; return the drained paths as `Vec<String>` via `to_string_lossy`.
 
 - [X] T005 Wire `launch_files` into `src-tauri/src/lib.rs`: add `mod launch_files;` near the top; add `.manage(launch_files::LaunchFilesState::default())` to the Tauri builder chain; register `launch_files::get_pending_files` inside the existing `tauri::generate_handler![...]` macro (keep the existing `greet` registration untouched — its removal is out of scope per plan.md Complexity Tracking). (Depends on T004.)
@@ -71,9 +71,9 @@ Single-project layout (Tauri 2 + React + TypeScript + Vite):
 
 ## Phase 3: User Story 1 - Open `.md` files via OS file association (Priority: P1) 🎯 MVP
 
-**Goal**: Wire OS file activations into MILF. On macOS, `NSApplicationOpenURLs` (delivered as `tauri::RunEvent::Opened { urls }`) reaches the running app. On all three OSes, the bundle installer registers MILF as a handler for `.md` and `.markdown`. On Windows / Linux, file activations from the OS browser arrive via process argv — those reach MILF's existing tab set only AFTER US3 lands (cross-story dependency documented below).
+**Goal**: Wire OS file activations into markpad. On macOS, `NSApplicationOpenURLs` (delivered as `tauri::RunEvent::Opened { urls }`) reaches the running app. On all three OSes, the bundle installer registers markpad as a handler for `.md` and `.markdown`. On Windows / Linux, file activations from the OS browser arrive via process argv — those reach markpad's existing tab set only AFTER US3 lands (cross-story dependency documented below).
 
-**Independent Test**: Build the release bundle (`npm run tauri build`), install it, set MILF as the default `.md` handler in OS settings, then double-click a `.md` file in the OS file browser. The file opens as the active tab in MILF. (See [quickstart.md Scenario A](quickstart.md).)
+**Independent Test**: Build the release bundle (`npm run tauri build`), install it, set markpad as the default `.md` handler in OS settings, then double-click a `.md` file in the OS file browser. The file opens as the active tab in markpad. (See [quickstart.md Scenario A](quickstart.md).)
 
 ### Implementation for User Story 1
 
@@ -95,15 +95,15 @@ Single-project layout (Tauri 2 + React + TypeScript + Vite):
   ```
   The `.run(closure)` form is infallible (returns `()`), so the `.expect(...)` moves from `.run` to `.build`. (Depends on T010.)
 
-**Checkpoint**: On macOS, double-clicking a `.md` file (with MILF as the registered handler) routes the file into MILF correctly for both cold-start and hot scenarios. On Windows / Linux, the bundle now advertises MILF as a `.md` handler, but file activations arriving via argv won't reach the tab set until US3 ships. (See cross-story dependency note in Dependencies below.)
+**Checkpoint**: On macOS, double-clicking a `.md` file (with markpad as the registered handler) routes the file into markpad correctly for both cold-start and hot scenarios. On Windows / Linux, the bundle now advertises markpad as a `.md` handler, but file activations arriving via argv won't reach the tab set until US3 ships. (See cross-story dependency note in Dependencies below.)
 
 ---
 
 ## Phase 4: User Story 2 - Single running instance with bring-to-front routing (Priority: P2)
 
-**Goal**: Enforce one running MILF per OS user session. A second invocation (CLI, OS activation, or Open With) routes its file arguments to the existing instance and brings its main window to the foreground, instead of spawning a second process / window. Bare second invocations (no file args) just raise the existing window.
+**Goal**: Enforce one running markpad per OS user session. A second invocation (CLI, OS activation, or Open With) routes its file arguments to the existing instance and brings its main window to the foreground, instead of spawning a second process / window. Bare second invocations (no file args) just raise the existing window.
 
-**Independent Test**: Launch MILF; open a file via the in-app Open control; minimize the window. From a terminal, run `milf` (no args). The existing window restores and comes to the foreground; no second window appears. Then run `milf foo.md`: still no second window; `foo.md` appears as a new tab alongside the existing tab and becomes active. (See [quickstart.md Scenario B](quickstart.md).)
+**Independent Test**: Launch markpad; open a file via the in-app Open control; minimize the window. From a terminal, run `markpad` (no args). The existing window restores and comes to the foreground; no second window appears. Then run `markpad foo.md`: still no second window; `foo.md` appears as a new tab alongside the existing tab and becomes active. (See [quickstart.md Scenario B](quickstart.md).)
 
 ### Implementation for User Story 2
 
@@ -132,15 +132,15 @@ Single-project layout (Tauri 2 + React + TypeScript + Vite):
   ```
   (Depends on T001 for the dep and T012 for the callback.)
 
-**Checkpoint**: Running `milf` (with or without args) while another MILF is open routes to the existing window and brings it to the foreground. Combined with US1, hot file activations on Windows / Linux now work (file association double-click → second invocation → handle_second_invocation → existing window receives the file).
+**Checkpoint**: Running `markpad` (with or without args) while another markpad is open routes to the existing window and brings it to the foreground. Combined with US1, hot file activations on Windows / Linux now work (file association double-click → second invocation → handle_second_invocation → existing window receives the file).
 
 ---
 
 ## Phase 5: User Story 3 - Open files via positional command-line arguments (Priority: P3)
 
-**Goal**: `milf file1.md file2.md` from a terminal opens both files as tabs. On cold start (no MILF running), the launching process ingests its own argv. On hot start (MILF already running), the second invocation's argv is routed via US2's `handle_second_invocation`. Bad paths are silently skipped (no error dialog, no orphan tab).
+**Goal**: `markpad file1.md file2.md` from a terminal opens both files as tabs. On cold start (no markpad running), the launching process ingests its own argv. On hot start (markpad already running), the second invocation's argv is routed via US2's `handle_second_invocation`. Bad paths are silently skipped (no error dialog, no orphan tab).
 
-**Independent Test**: With MILF not running, from a fresh shell run `milf file1.md file2.md`. MILF launches with both files as tabs, in argument order, with `file2.md` active. With MILF running, run `milf nonexistent.md real-file.md`: no second window; `real-file.md` opens as a new tab and becomes active; `nonexistent.md` is silently skipped. (See [quickstart.md Scenario C](quickstart.md).)
+**Independent Test**: With markpad not running, from a fresh shell run `markpad file1.md file2.md`. markpad launches with both files as tabs, in argument order, with `file2.md` active. With markpad running, run `markpad nonexistent.md real-file.md`: no second window; `real-file.md` opens as a new tab and becomes active; `nonexistent.md` is silently skipped. (See [quickstart.md Scenario C](quickstart.md).)
 
 ### Implementation for User Story 3
 
@@ -168,7 +168,7 @@ Single-project layout (Tauri 2 + React + TypeScript + Vite):
   ```
   The `app.handle().clone()` produces an owned `AppHandle` to satisfy the `ingest_initial_args` signature (`AppHandle` is cheap to clone). (Depends on T014.)
 
-**Checkpoint**: Cold-start `milf foo.md bar.md` from a shell opens both files. Combined with US1 (file association registration) and US2 (single instance), Windows / Linux file activations cold-start case is also fully covered (file activation → OS launches MILF with argv → `ingest_initial_args` → tab set populated).
+**Checkpoint**: Cold-start `markpad foo.md bar.md` from a shell opens both files. Combined with US1 (file association registration) and US2 (single instance), Windows / Linux file activations cold-start case is also fully covered (file activation → OS launches markpad with argv → `ingest_initial_args` → tab set populated).
 
 ---
 
@@ -176,7 +176,7 @@ Single-project layout (Tauri 2 + React + TypeScript + Vite):
 
 **Goal**: Persist the set of open file paths and the active-tab pointer to `session.json` in the per-user Tauri app-data dir; on next launch, reopen each surviving file (silently dropping missing ones) and re-activate the saved active tab (or the nearest surviving neighbor per FR-017). A corrupt or missing `session.json` falls back cleanly to the empty state.
 
-**Independent Test**: Open MILF, open three different `.md` files via the in-app Open control, switch to the middle one (active), then close MILF. Relaunch MILF. The three files reappear as tabs in the same order, with the middle one active. Now delete one of those files from disk outside MILF, close MILF, and relaunch. The remaining two appear; no error dialog; an existing-file tab is active. (See [quickstart.md Scenario D](quickstart.md).)
+**Independent Test**: Open markpad, open three different `.md` files via the in-app Open control, switch to the middle one (active), then close markpad. Relaunch markpad. The three files reappear as tabs in the same order, with the middle one active. Now delete one of those files from disk outside markpad, close markpad, and relaunch. The remaining two appear; no error dialog; an existing-file tab is active. (See [quickstart.md Scenario D](quickstart.md).)
 
 ### Implementation for User Story 4
 
@@ -238,7 +238,7 @@ Single-project layout (Tauri 2 + React + TypeScript + Vite):
   ```
   Notes: Untitled tabs are filtered out (they have no path); their `""` entries in `tabPathsKey` still affect the dep so adding/closing Untitled tabs triggers a debounce window, but the saved payload omits them. (Depends on T018.)
 
-**Checkpoint**: Closing MILF with N file-backed tabs and relaunching restores those N tabs (minus any deleted since close). The previously active tab is re-activated when its file still exists; otherwise a sensible neighbor. A corrupt `session.json` is silently replaced on next save.
+**Checkpoint**: Closing markpad with N file-backed tabs and relaunching restores those N tabs (minus any deleted since close). The previously active tab is re-activated when its file still exists; otherwise a sensible neighbor. A corrupt `session.json` is silently replaced on next save.
 
 ---
 
@@ -251,8 +251,8 @@ Single-project layout (Tauri 2 + React + TypeScript + Vite):
 - [ ] T022 [P] Cross-OS smoke test: run [quickstart.md Scenarios A1-A4, B1-B5, C14-C18](quickstart.md) on at least one of macOS or Linux (whichever is reachable). Scenario B5 (macOS-specific `RunEvent::Opened` for hot file activation) is the most important non-Windows check since the Rust code path is conditional on OS-level event delivery and cannot be exercised on Windows. Document findings in the PR description.
 
 - [X] T023 [P] Update [README.md](README.md) Features list (lines 17-29) to add three new user-facing bullets:
-  - "Open files from your file manager." Set MILF as the default for `.md` and a double-click opens MILF (or routes to the running instance).
-  - "One window per user." MILF runs as a single instance; new file requests bring the existing window to the foreground.
+  - "Open files from your file manager." Set markpad as the default for `.md` and a double-click opens markpad (or routes to the running instance).
+  - "One window per user." markpad runs as a single instance; new file requests bring the existing window to the foreground.
   - "Resumes where you left off." Open files are remembered between launches; missing files are silently dropped.
   Also update the "Persistent preferences" bullet to say "and your set of open files" (or move the persistence note to the new Resumes bullet to avoid overlap). Verify the README's stale "Active-file header" bullet (line 25) — if Feature 006 already removed it, this confirmation is a no-op; if it survived, remove it as part of this update. Finally, optionally extend the Privacy section (line 95-96) to add: "Session state (the list of open files) is stored locally in your platform's standard application-data directory; nothing is sent over the network." Coordinate with the maintainer before landing copy changes.
 
@@ -276,7 +276,7 @@ All four stories depend ONLY on Foundational at the implementation level. They t
 - **US1 macOS file association**: works after Foundational + US1.
 - **US1 Windows / Linux file association cold-start**: works after Foundational + US1 + **US3** (because Windows / Linux deliver file activations via process argv, which `ingest_initial_args` from US3 is responsible for ingesting).
 - **US1 Windows / Linux file association hot path**: works after Foundational + US1 + US2 + US3 (hot activations on Win/Linux become second invocations routed through `handle_second_invocation` from US2; the file path comes from argv that US3's ingestion logic understands — but for the SI callback specifically, US2's `handle_second_invocation` includes its own argv processing, so technically the hot path on Win/Linux works after just US2 + US1 without US3. US3 is only needed for the COLD start half on those OSes).
-- **US2**: works after Foundational + US2 (single instance + bring-to-front, on its own, for any bare second `milf` invocation or for `milf foo.md` hot invocations).
+- **US2**: works after Foundational + US2 (single instance + bring-to-front, on its own, for any bare second `markpad` invocation or for `markpad foo.md` hot invocations).
 - **US3 cold start**: works after Foundational + US3.
 - **US3 hot start**: works after Foundational + US2 + US3 (second-invocation routing is from US2).
 - **US4**: works after Foundational + US4 (entirely independent of US1/US2/US3 at the implementation level).
@@ -362,9 +362,9 @@ If shipping the smallest user-visible MVP first:
 1. Complete Phase 1: Setup (T001).
 2. Complete Phase 2: Foundational (T002-T008).
 3. Complete Phase 3: US1 (T009-T011).
-4. **STOP and VALIDATE**: on macOS, run [quickstart.md Scenario A](quickstart.md) — double-clicking a `.md` file opens it in MILF. On Windows / Linux, the bundle registers MILF as a handler, but actually opening files via clicks will land in the empty state (because argv ingestion is still missing) — **so the MVP is macOS-only at this point**.
+4. **STOP and VALIDATE**: on macOS, run [quickstart.md Scenario A](quickstart.md) — double-clicking a `.md` file opens it in markpad. On Windows / Linux, the bundle registers markpad as a handler, but actually opening files via clicks will land in the empty state (because argv ingestion is still missing) — **so the MVP is macOS-only at this point**.
 5. To make MVP cross-platform, add US3 (T014-T015) so cold-start argv ingestion lands.
-6. To remove the multi-window annoyance on Win/Linux double-clicks against a running MILF, add US2 (T012-T013).
+6. To remove the multi-window annoyance on Win/Linux double-clicks against a running markpad, add US2 (T012-T013).
 
 This sequence reflects the spec's stated priorities. The maintainer should weigh "cross-platform MVP" against "macOS-only MVP that ships sooner" when picking the merge order.
 

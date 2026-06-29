@@ -12,11 +12,11 @@
 
 ### User Story 1 - Save edits back to the opened file (Priority: P1)
 
-A user opens an existing markdown file (per Feature 003), edits its contents in MILF, and wants those changes to live on disk — not just in memory. They click a clearly visible Save control in the application chrome. The application writes the editor's current contents back to the same file the document was loaded from. A visible modified indicator clears the moment the save succeeds, so the user knows their work is safe.
+A user opens an existing markdown file (per Feature 003), edits its contents in markpad, and wants those changes to live on disk — not just in memory. They click a clearly visible Save control in the application chrome. The application writes the editor's current contents back to the same file the document was loaded from. A visible modified indicator clears the moment the save succeeds, so the user knows their work is safe.
 
-**Why this priority**: Without a save path, MILF is read-only for any existing file the user opens. Feature 003 made "open" possible; this story is what turns MILF from "viewer with scratch edits" into "editor you can actually trust with your notes". Every later persistence feature (auto-save, save-as, recent files, restore session) builds on a working manual save.
+**Why this priority**: Without a save path, markpad is read-only for any existing file the user opens. Feature 003 made "open" possible; this story is what turns markpad from "viewer with scratch edits" into "editor you can actually trust with your notes". Every later persistence feature (auto-save, save-as, recent files, restore session) builds on a working manual save.
 
-**Independent Test**: Open an existing markdown file from disk, type a small change into the editor, click the Save control, close the application, reopen the file in MILF or any other text editor, and confirm the change is on disk.
+**Independent Test**: Open an existing markdown file from disk, type a small change into the editor, click the Save control, close the application, reopen the file in markpad or any other text editor, and confirm the change is on disk.
 
 **Acceptance Scenarios**:
 
@@ -30,11 +30,11 @@ A user opens an existing markdown file (per Feature 003), edits its contents in 
 
 ### User Story 2 - Always see which file you are editing at the top (Priority: P2)
 
-A user often has several MILF windows or returns to MILF after a context switch. They glance at the top of the application and immediately see the name of the file they are currently editing, with a clear visual cue when there are unsaved changes. When no file is open, the header tells them so (e.g., "Untitled") rather than leaving them guessing.
+A user often has several markpad windows or returns to markpad after a context switch. They glance at the top of the application and immediately see the name of the file they are currently editing, with a clear visual cue when there are unsaved changes. When no file is open, the header tells them so (e.g., "Untitled") rather than leaving them guessing.
 
 **Why this priority**: Knowing what you are editing is a baseline expectation of every text editor. It also makes the save path trustworthy — users will only press Save with confidence if they can see which file the edit will land in. It is P2 (not P1) because Feature 003 already provides a minimum indication via the window title; this story upgrades that indication to a more prominent in-workspace header and adds the modified marker.
 
-**Independent Test**: Launch MILF (header reads "Untitled"), open a markdown file (header now reads the file's name), type a change (modified indicator appears in the header), save (indicator clears), and confirm the header is visible in every supported view mode (editor only, preview only, split).
+**Independent Test**: Launch markpad (header reads "Untitled"), open a markdown file (header now reads the file's name), type a change (modified indicator appears in the header), save (indicator clears), and confirm the header is visible in every supported view mode (editor only, preview only, split).
 
 **Acceptance Scenarios**:
 
@@ -48,7 +48,7 @@ A user often has several MILF windows or returns to MILF after a context switch.
 
 ### User Story 3 - Turn on auto-save and have that choice remembered (Priority: P3)
 
-A user prefers not to think about saving. They tick an "Auto-save" checkbox alongside the Save control. From that point on, while a file is opened, the application quietly writes the editor's contents back to disk shortly after the user stops typing. The next time the user launches MILF, the checkbox is still ticked.
+A user prefers not to think about saving. They tick an "Auto-save" checkbox alongside the Save control. From that point on, while a file is opened, the application quietly writes the editor's contents back to disk shortly after the user stops typing. The next time the user launches markpad, the checkbox is still ticked.
 
 **Why this priority**: This is a comfort feature layered on top of stories P1 and P2. It is genuinely useful (many users will keep it on), but the application is fully usable without it: a deliberate Save click is always available. Implementing it later does not require redoing P1 or P2. Listing it third keeps it out of the critical path if scope must be trimmed.
 
@@ -70,7 +70,7 @@ A user prefers not to think about saving. They tick an "Auto-save" checkbox alon
 - The user has unsaved changes in an opened file, then opens a *different* file via the Open control (Feature 003). Behavior of the in-memory content during open is governed by Feature 003 (which states open replaces the current content); this feature MUST NOT silently auto-save just because auto-save is on — auto-save fires on idle, not on "I am about to discard this buffer".
 - The user activates Save while an auto-save is already in flight. The application MUST NOT corrupt the file by writing twice concurrently; one effective write is enough.
 - The user activates Save with the editor fully empty (opened file then deleted all text). The file on disk becomes empty. This is the user's intent — empty is a valid file state.
-- The user's opened file is moved, renamed, or deleted by another program after it was opened in MILF. The next save fails through the standard error path with a clear message; the editor content stays in memory.
+- The user's opened file is moved, renamed, or deleted by another program after it was opened in markpad. The next save fails through the standard error path with a clear message; the editor content stays in memory.
 - The volume hosting the opened file becomes read-only between open and save (e.g., USB drive removed). The save fails through the standard error path.
 - The application crashes or the user force-quits while auto-save is enabled but before the next idle save fires. Recovery of in-memory unsaved edits is NOT promised by this spec — the user is expected to save manually before quitting if they want a guarantee. Crash-recovery is a candidate for a follow-up feature.
 - The auto-save preference is stored but unreadable on launch (corrupted preference store). The application falls back to auto-save OFF and continues to launch normally, consistent with Feature 003's preference fallback rules.
@@ -141,7 +141,7 @@ A user prefers not to think about saving. They tick an "Auto-save" checkbox alon
 ## Assumptions
 
 - "Save" writes back to the same file that was opened via Feature 003's Open control. "Save As" (writing to a different path), "Save a Copy", and a prompt-on-quit-when-unsaved are all explicitly out of scope and are candidates for follow-up features.
-- When no file is opened (starter content or empty buffer), Save is unavailable. Users must first open a file via Feature 003 to gain a backing path. Creating a new file from inside MILF (e.g., "New file…") is a candidate for a follow-up feature.
+- When no file is opened (starter content or empty buffer), Save is unavailable. Users must first open a file via Feature 003 to gain a backing path. Creating a new file from inside markpad (e.g., "New file…") is a candidate for a follow-up feature.
 - Auto-save uses a short idle debounce after the user's last edit (on the order of 1–3 seconds) so it does not churn out a write per keystroke. The exact interval is an implementation choice within reasonable bounds and does not need to be exposed to the user.
 - Auto-save fires only on idle. It does NOT fire on focus loss, on view-mode switch, on theme toggle, on Open (which replaces content per Feature 003), or on application close. Save-on-close and save-on-blur are candidates for follow-up features.
 - The modified indicator follows the common convention of an asterisk (or equivalent visual marker) next to the file name. The exact glyph is a visual-design detail and not constrained further by this spec.
@@ -152,6 +152,6 @@ A user prefers not to think about saving. They tick an "Auto-save" checkbox alon
 - No keyboard shortcut is required by this spec. Ctrl+S / Cmd+S for Save is a natural follow-up and is not prohibited by this spec.
 - Crash recovery, automatic backups, and external file-watch ("the file changed under us") are out of scope. The user is responsible for saving (or enabling auto-save) before quitting if they want their work persisted.
 - The auto-save preference is stored using the same local preference mechanism established in Feature 003. Preferences remain on the user's machine and are never sent over the network, consistent with the constitution's local-first principle.
-- A "Recent files" list and multi-document editing (tabs, multiple windows of MILF working on different files) remain out of scope and are candidates for follow-up features.
+- A "Recent files" list and multi-document editing (tabs, multiple windows of markpad working on different files) remain out of scope and are candidates for follow-up features.
 - The Save control, auto-save toggle, and active-file header are subject to the "islands" visual aesthetic established in Feature 002; this feature adds controls but does not redesign the overall chrome.
 - Save concurrency (manual Save during an in-flight auto-save, or two rapid Saves in quick succession) is resolved internally so the file on disk is never partially written; the exact synchronization mechanism is an implementation detail and does not surface as user-visible behavior beyond "the file ends up correct".

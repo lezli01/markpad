@@ -39,7 +39,7 @@ Single-project Tauri + React layout (per `plan.md` "Project Structure"):
 - [X] T004 Create [src/styles.css](src/styles.css) containing `@import "tailwindcss";` plus CSS custom properties for the "islands" palette (background gradient stops, surface, ring, muted text) so CodeMirror's theme and component utilities share one source of truth (per `research.md` §3, §5)
 - [X] T005 Update [src/main.tsx](src/main.tsx) to `import "./styles.css"` (replacing any existing CSS import indirectly pulled from `App.tsx`)
 - [X] T006 [P] Delete [src/App.css](src/App.css) — its starter styles conflict with Tailwind's reset and are no longer referenced after T005
-- [X] T007 [P] Update the `<title>` in [index.html](index.html) from `Tauri + React + Typescript` to `MILF`, and remove the `/vite.svg` favicon `<link>` so no Vite branding ships in the chrome
+- [X] T007 [P] Update the `<title>` in [index.html](index.html) from `Tauri + React + Typescript` to `markpad`, and remove the `/vite.svg` favicon `<link>` so no Vite branding ships in the chrome
 - [X] T008 [P] Prune unused Tauri starter logos: delete [src/assets/react.svg](src/assets/react.svg), [public/tauri.svg](public/tauri.svg), and [public/vite.svg](public/vite.svg)
 
 ---
@@ -98,7 +98,7 @@ Single-project Tauri + React layout (per `plan.md` "Project Structure"):
 
 ### Implementation for User Story 3
 
-- [X] T018 [US3] Create [src/lib/starterContent.ts](src/lib/starterContent.ts) exporting `export const starterContent: string` — a short multi-line markdown sample (under ~30 lines per `research.md` §6) that introduces MILF in one sentence and demonstrates a heading, bold, italic, an unordered list, a link, and an inline code span, ending with a friendly call-to-action like "Try editing this text — the preview updates as you type."
+- [X] T018 [US3] Create [src/lib/starterContent.ts](src/lib/starterContent.ts) exporting `export const starterContent: string` — a short multi-line markdown sample (under ~30 lines per `research.md` §6) that introduces markpad in one sentence and demonstrates a heading, bold, italic, an unordered list, a link, and an inline code span, ending with a friendly call-to-action like "Try editing this text — the preview updates as you type."
 - [X] T019 [US3] Update [src/App.tsx](src/App.tsx) to `import { starterContent } from "./lib/starterContent"` and initialize state with it: `const [text, setText] = useState(starterContent)`. Depends on T018.
 
 **Checkpoint**: All three user stories are independently functional. Quickstart step 1 ("starter markdown is in the Editor; the Preview shows it rendered…") now passes alongside everything from US1 and US2.
@@ -109,7 +109,7 @@ Single-project Tauri + React layout (per `plan.md` "Project Structure"):
 
 **Purpose**: Verify the constitution gates, confirm the manual acceptance walkthrough end-to-end, and tidy the desktop shell.
 
-- [X] T020 [P] Tweak the default Tauri window in [src-tauri/tauri.conf.json](src-tauri/tauri.conf.json) — set the main window `title` to `"MILF"` and a reasonable default size (e.g., `width: 1200`, `height: 800`) so first launch lands at a comfortable desktop size
+- [X] T020 [P] Tweak the default Tauri window in [src-tauri/tauri.conf.json](src-tauri/tauri.conf.json) — set the main window `title` to `"markpad"` and a reasonable default size (e.g., `width: 1200`, `height: 800`) so first launch lands at a comfortable desktop size
 - [X] T021 Run `npm run build` from the repo root and confirm zero TypeScript errors and a reasonable production bundle size (Constitution Principle IX — `tsc` gate)
 - [X] T022 [P] Manually walk through [specs/002-split-pane-editor-layout/quickstart.md](specs/002-split-pane-editor-layout/quickstart.md) steps 1–5 (initial render, live preview, empty state, responsive resize from ~1200 px → ~480 px → back, independent scroll with a long pasted document)
 - [X] T023 [P] Manually walk through [specs/002-split-pane-editor-layout/quickstart.md](specs/002-split-pane-editor-layout/quickstart.md) step 6 (sanitizer check): paste `<script>alert('xss')</script>`, `<img src="x" onerror="alert('xss')" />`, and `[click me](javascript:alert('xss'))` into the editor and confirm no alert fires, the script tag is inert, the `onerror` attribute is stripped, and the `javascript:` URL is neutralized — proves Constitution VII is enforced via [src/lib/markdown.ts](src/lib/markdown.ts)

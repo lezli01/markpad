@@ -30,7 +30,7 @@ The Document continues to be the `text` string in React state in `App.tsx`. This
 | User undo / redo | overwritten | unchanged |
 | Successful Open (`handleOpenFile` `kind: "ok"`) | replaced with file content | replaced with file content (file is in sync at this moment) |
 | Successful Save (`performSave` resolves OK) | unchanged | set to the `text` snapshot the save was kicked off with |
-| Failed Save (`performSave` rejects) | unchanged | unchanged (the on-disk file is, from MILF's perspective, still the previous saved value) |
+| Failed Save (`performSave` rejects) | unchanged | unchanged (the on-disk file is, from markpad's perspective, still the previous saved value) |
 | Cancelled Open dialog | unchanged | unchanged |
 | Failed Open | unchanged | unchanged |
 | Theme / view-mode / auto-save toggle | unchanged | unchanged |
@@ -104,7 +104,7 @@ Feature 003 introduced `theme` and `viewMode`. This feature adds **one** new pre
 |---|---|---|---|
 | `theme` | `"light" \| "dark"` | resolved from system on first launch | Unchanged from Feature 003. |
 | `viewMode` | `"editor" \| "preview" \| "split"` | `"split"` | Unchanged from Feature 003. |
-| `autoSave` | `boolean` | `false` | FR-019, FR-020. Stored under `localStorage["milf.autoSave"]` as `"on"` / `"off"`. Exposed to TypeScript callers as `boolean`. |
+| `autoSave` | `boolean` | `false` | FR-019, FR-020. Stored under `localStorage["markpad.autoSave"]` as `"on"` / `"off"`. Exposed to TypeScript callers as `boolean`. |
 
 **Validation rules** for `autoSave`:
 - On read, any value other than the literal strings `"on"` or `"off"` (including `null`, malformed values, an old key the app no longer recognises) is treated as **absent** and the default `false` is used (FR-020). The app does not throw and does not block launch.
@@ -116,7 +116,7 @@ Feature 003 introduced `theme` and `viewMode`. This feature adds **one** new pre
                        app launch
                             │
                             ▼
-              read localStorage["milf.autoSave"]
+              read localStorage["markpad.autoSave"]
                             │
               ┌────────────┴────────────┐
               ▼                         ▼
@@ -133,7 +133,7 @@ Feature 003 introduced `theme` and `viewMode`. This feature adds **one** new pre
         autoSave = !autoSave  (boolean flip)
                             │
                             ▼
-        write localStorage["milf.autoSave"] = "on" | "off"
+        write localStorage["markpad.autoSave"] = "on" | "off"
                             │
                             ▼
         if autoSave === true AND openedFile !== null AND text !== savedText:
@@ -182,9 +182,9 @@ App
  ├── state: text                   (Document.text — unchanged)
  ├── state: savedText              (Document — NEW; snapshots `text` on open/save success)
  ├── state: openedFile             (OpenedFileReference — unchanged from 003)
- ├── state: theme                  (Preferences — unchanged from 003)        ──persisted──▶ localStorage["milf.theme"]
- ├── state: viewMode               (Preferences — unchanged from 003)        ──persisted──▶ localStorage["milf.viewMode"]
- ├── state: autoSave               (Preferences — NEW)                       ──persisted──▶ localStorage["milf.autoSave"]
+ ├── state: theme                  (Preferences — unchanged from 003)        ──persisted──▶ localStorage["markpad.theme"]
+ ├── state: viewMode               (Preferences — unchanged from 003)        ──persisted──▶ localStorage["markpad.viewMode"]
+ ├── state: autoSave               (Preferences — NEW)                       ──persisted──▶ localStorage["markpad.autoSave"]
  ├── state: saving                 (Save State — NEW)
  ├── state: error                  (Error Banner — extended trigger set)
  ├── ref:   pendingSaveRef         (Save State helper — NEW; not state)
@@ -221,9 +221,9 @@ Single-direction data flow throughout. The only side effects are the three `useE
 
 | Key | Value encoding | Decoded type | Default on read failure | Introduced by |
 |---|---|---|---|---|
-| `milf.theme` | `"light" \| "dark"` | string enum | system preference via `matchMedia` (fallback `"light"`) | Feature 003 |
-| `milf.viewMode` | `"editor" \| "preview" \| "split"` | string enum | `"split"` | Feature 003 |
-| `milf.autoSave` | `"on" \| "off"` | `boolean` (mapped at the chokepoint) | `false` | **Feature 004 (NEW)** |
+| `markpad.theme` | `"light" \| "dark"` | string enum | system preference via `matchMedia` (fallback `"light"`) | Feature 003 |
+| `markpad.viewMode` | `"editor" \| "preview" \| "split"` | string enum | `"split"` | Feature 003 |
+| `markpad.autoSave` | `"on" \| "off"` | `boolean` (mapped at the chokepoint) | `false` | **Feature 004 (NEW)** |
 
 All three keys are read on launch via the `preferences.ts` chokepoint. All three keys are written best-effort; write failures log via `console.warn` and do not crash.
 

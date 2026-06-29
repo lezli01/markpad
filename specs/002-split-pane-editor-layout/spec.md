@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "create the foundation of the milf markdown editor/viewer application layout the starter page, split pane left is editor right pane is preview, responsive flex layout"
+**Input**: User description: "create the foundation of the markpad markdown editor/viewer application layout the starter page, split pane left is editor right pane is preview, responsive flex layout"
 
 ## User Scenarios & Testing *(mandatory)*
 

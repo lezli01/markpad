@@ -5,9 +5,9 @@
 export type Theme = "light" | "dark";
 export type ViewMode = "editor" | "preview" | "split";
 
-const THEME_KEY = "milf.theme";
-const VIEW_MODE_KEY = "milf.viewMode";
-const AUTO_SAVE_KEY = "milf.autoSave";
+const THEME_KEY = "markpad.theme";
+const VIEW_MODE_KEY = "markpad.viewMode";
+const AUTO_SAVE_KEY = "markpad.autoSave";
 
 const ALLOWED_THEMES: readonly Theme[] = ["light", "dark"];
 const ALLOWED_VIEW_MODES: readonly ViewMode[] = ["editor", "preview", "split"];

@@ -67,7 +67,7 @@ The TypeScript field names match the JSON exactly (snake_case `active_index`). N
 | File corruption (manual edit, partial write) | `load_session` returns `SessionRecord::default()`. The next save will overwrite the corrupted file with the current valid state. |
 | App is closed during a write | The atomic temp + rename pattern means either the old `session.json` is intact (write didn't reach rename) or the new one is intact (rename completed). No partial file is ever observed by a subsequent load. |
 | User manually deletes `session.json` between launches | Treated as "first-ever launch" — empty session, normal empty state. |
-| User opts to clear MILF's app data | Deleting the file is sufficient; no separate "reset session" UI is in this feature. |
+| User opts to clear markpad's app data | Deleting the file is sufficient; no separate "reset session" UI is in this feature. |
 
 ---
 
@@ -98,7 +98,7 @@ Registered via `.manage(LaunchFilesState::default())` in `lib.rs::run()`.
 | Field | Type | Notes |
 |---|---|---|
 | `pending` | `Mutex<Vec<PathBuf>>` | Canonicalized, existent file paths that have been ingested before the frontend signaled readiness. Drained by `get_pending_files`. Pushed to by `ingest_initial_args` (cold-start argv), `handle_opened_urls` (macOS file activation pre-ready), and `handle_second_invocation` (second invocation pre-ready — extremely rare but possible if the first instance is mid-cold-start when a second invocation arrives). |
-| `frontend_ready` | `AtomicBool` | `false` from process start until `get_pending_files` is invoked the first time. Once `true`, new launch-file arrivals are emitted as `milf://open-files` events instead of being buffered. The atomic prevents a torn read across the route-paths decision. |
+| `frontend_ready` | `AtomicBool` | `false` from process start until `get_pending_files` is invoked the first time. Once `true`, new launch-file arrivals are emitted as `markpad://open-files` events instead of being buffered. The atomic prevents a torn read across the route-paths decision. |
 
 ### Validation rules
 
@@ -131,7 +131,7 @@ Process start
    │
    ├─ (later) second-invocation callback or macOS Opened:
    │     route_paths(app, [canonical_paths])
-   │       └─ frontend_ready=true → app.emit("milf://open-files", { paths })
+   │       └─ frontend_ready=true → app.emit("markpad://open-files", { paths })
    │
    └─ Process exit (single-instance lock released by plugin)
 ```
@@ -167,9 +167,9 @@ This rule is implemented in `App.tsx`'s mount effect, not as a stored field — 
 
 | Key in `localStorage` | Type | Default |
 |---|---|---|
-| `milf.theme` | `"light" \| "dark"` | System preference; falls back to `"light"`. |
-| `milf.viewMode` | `"editor" \| "preview" \| "split"` | `"split"`. |
-| `milf.autoSave` | `"on" \| "off"` (exposed as `boolean`) | `false`. |
+| `markpad.theme` | `"light" \| "dark"` | System preference; falls back to `"light"`. |
+| `markpad.viewMode` | `"editor" \| "preview" \| "split"` | `"split"`. |
+| `markpad.autoSave` | `"on" \| "off"` (exposed as `boolean`) | `false`. |
 
 This feature does NOT add a new `localStorage` key and does NOT migrate preferences. The preferences chokepoint (`src/lib/preferences.ts`) is untouched.
 
@@ -201,7 +201,7 @@ The full contract is in [contracts/tauri-interface.md](contracts/tauri-interface
 
 | Event | Direction | Payload | Emitted by |
 |---|---|---|---|
-| `milf://open-files` | Rust → TS | `{ paths: string[] }` (canonical absolute paths) | `route_paths` in `launch_files.rs` (post-`frontend_ready`); fires on second-invocation handoffs and macOS `RunEvent::Opened` after the frontend is up. |
+| `markpad://open-files` | Rust → TS | `{ paths: string[] }` (canonical absolute paths) | `route_paths` in `launch_files.rs` (post-`frontend_ready`); fires on second-invocation handoffs and macOS `RunEvent::Opened` after the frontend is up. |
 
 ---
 

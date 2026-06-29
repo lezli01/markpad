@@ -1,8 +1,8 @@
-# Contributing to MILF
+# Contributing to markpad
 
-Thanks for helping improve MILF, the Markdown Interface & Live Formatter.
+Thanks for helping improve markpad, the Markdown editor with live preview.
 
-MILF is early-stage and intentionally contributor-friendly: small issues, clear acceptance criteria, and reviewable pull requests are preferred over large surprise changes.
+markpad is early-stage and intentionally contributor-friendly: small issues, clear acceptance criteria, and reviewable pull requests are preferred over large surprise changes.
 
 ## Ways to Contribute
 

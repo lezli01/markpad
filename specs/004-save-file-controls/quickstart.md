@@ -93,9 +93,9 @@ Steps map directly to the "UI acceptance contract" in `contracts/components.md` 
    - The Save button stays enabled (you can save again).
    - In your external terminal, `cat save-test.md` now shows the edited content.
 
-5. **Round-trip persistence (US1 Independent Test)** — Quit the application entirely. Reopen `save-test.md` in any text editor (or `cat` it). Confirm the edit from step 4 is on disk. (Optional: reopen MILF, click Open, pick `save-test.md`, confirm the editor shows the edit.)
+5. **Round-trip persistence (US1 Independent Test)** — Quit the application entirely. Reopen `save-test.md` in any text editor (or `cat` it). Confirm the edit from step 4 is on disk. (Optional: reopen markpad, click Open, pick `save-test.md`, confirm the editor shows the edit.)
 
-6. **Save error path (FR-004, US1 AS3, SC-002)** — Make `save-test.md` read-only outside MILF (e.g., `chmod -w save-test.md` on Unix, or Properties → Read-only on Windows). In MILF, type another change (header gets the asterisk again). Click Save. Confirm:
+6. **Save error path (FR-004, US1 AS3, SC-002)** — Make `save-test.md` read-only outside markpad (e.g., `chmod -w save-test.md` on Unix, or Properties → Read-only on Windows). In markpad, type another change (header gets the asterisk again). Click Save. Confirm:
    - The editor's content is unchanged (your typed change is still visible).
    - A dismissible error banner appears explaining the failure in plain language (something like "Could not save this file. The location may be read-only or out of space.").
    - The asterisk remains in the header (the change is still only in memory — FR-004).
@@ -116,7 +116,7 @@ Steps map directly to the "UI acceptance contract" in `contracts/components.md` 
    - The header continues to show the current file name (and asterisk if applicable).
    - Toggling the theme between light and dark re-skins the header along with the rest of the chrome (no element stuck in the previous theme).
 
-10. **Long-name truncation + tooltip (FR-010, US2 AS4)** — Make a copy of `save-test.md` with a long name (e.g., `this-is-a-very-long-markdown-filename-used-to-test-the-truncation-and-tooltip-affordance-in-the-header.md`). Open it in MILF. Resize the window narrower until the name no longer fits in the header bar. Confirm:
+10. **Long-name truncation + tooltip (FR-010, US2 AS4)** — Make a copy of `save-test.md` with a long name (e.g., `this-is-a-very-long-markdown-filename-used-to-test-the-truncation-and-tooltip-affordance-in-the-header.md`). Open it in markpad. Resize the window narrower until the name no longer fits in the header bar. Confirm:
     - The displayed name truncates with an ellipsis (`…`).
     - Hovering the truncated name reveals the full absolute path via the native tooltip.
 
@@ -141,7 +141,7 @@ Steps map directly to the "UI acceptance contract" in `contracts/components.md` 
     - The asterisk only clears once you stop typing for ~1.5 s.
     - In your terminal, `cat auto-save-test.md` updates once (not per keystroke). This is critical for SC-005: 100 consecutive auto-save cycles should not churn out multiple writes per keystroke.
 
-16. **Auto-save error path (FR-015, US3 AS5)** — Make `auto-save-test.md` read-only externally. In MILF, type a change. Wait. Confirm:
+16. **Auto-save error path (FR-015, US3 AS5)** — Make `auto-save-test.md` read-only externally. In markpad, type a change. Wait. Confirm:
     - An error banner appears explaining the save failed.
     - The asterisk remains in the header.
     - Your typed text is still in the editor (not lost).
@@ -173,9 +173,9 @@ Steps map directly to the "UI acceptance contract" in `contracts/components.md` 
     - No error banner appears (assuming the location is writable).
     - If you can repeat this 10 times in a row, you have effectively tested SC-005 (100-cycle smoke check — the spec says 100, but 10 is usually enough to flush out a corruption bug if one exists).
 
-22. **First-time discoverability (FR-021, SC-007)** — Quit. Imagine you are seeing MILF for the first time. Without using the keyboard, locate within 30 seconds: (a) where the current file name is shown, (b) the Save button, (c) the Auto-save toggle. All three should be visible in the chrome the moment the app launches.
+22. **First-time discoverability (FR-021, SC-007)** — Quit. Imagine you are seeing markpad for the first time. Without using the keyboard, locate within 30 seconds: (a) where the current file name is shown, (b) the Save button, (c) the Auto-save toggle. All three should be visible in the chrome the moment the app launches.
 
-23. **Preference fallback when storage is corrupted (FR-020, SC-006 fallback half)** — Quit the app. In Tauri devtools (right-click → Inspect Element → Application → Local Storage), find the `milf.autoSave` entry and set it to an obviously invalid value like `"banana"`. Save. Relaunch the app. Confirm:
+23. **Preference fallback when storage is corrupted (FR-020, SC-006 fallback half)** — Quit the app. In Tauri devtools (right-click → Inspect Element → Application → Local Storage), find the `markpad.autoSave` entry and set it to an obviously invalid value like `"banana"`. Save. Relaunch the app. Confirm:
     - The app launches normally.
     - The Auto-save checkbox is unticked (default fallback per FR-020).
     - You can re-tick it; the next launch reads `"on"` correctly.
@@ -199,7 +199,7 @@ If all 25 steps pass, Feature 004 matches `spec.md` and is ready for review.
 (Per `spec.md` Assumptions and `research.md` §10 — do not be alarmed if the following are missing.)
 
 - **Save As / Save a Copy / "save to a different path"**: out of scope.
-- **"New file from inside MILF"**: out of scope. Save is unavailable until a file is opened.
+- **"New file from inside markpad"**: out of scope. Save is unavailable until a file is opened.
 - **Prompt-on-quit when there are unsaved edits / save-on-blur / save-on-view-mode-switch**: out of scope. Auto-save fires only on idle.
 - **Crash recovery / automatic backups / atomic write via temp file**: out of scope.
 - **Detecting external file changes / "reload from disk" / file watch**: out of scope.

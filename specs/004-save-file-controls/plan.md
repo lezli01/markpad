@@ -6,9 +6,9 @@
 
 ## Summary
 
-Turn MILF from "open and view" into "open and edit" by adding a Save control, an auto-save toggle, and a prominent active-file header to the workspace chrome built in Feature 003. The Save control writes the editor's current text back to the path the file was loaded from. A new `<FileHeader />` component sits at the top of the workspace and shows the file name (or `Untitled`), a modified marker, and a hover tooltip with the full path. An auto-save checkbox next to Save flips a debounced idle-saver on or off and persists that choice into the same `localStorage` namespace Feature 003 introduced.
+Turn markpad from "open and view" into "open and edit" by adding a Save control, an auto-save toggle, and a prominent active-file header to the workspace chrome built in Feature 003. The Save control writes the editor's current text back to the path the file was loaded from. A new `<FileHeader />` component sits at the top of the workspace and shows the file name (or `Untitled`), a modified marker, and a hover tooltip with the full path. An auto-save checkbox next to Save flips a debounced idle-saver on or off and persists that choice into the same `localStorage` namespace Feature 003 introduced.
 
-Technical approach: stay on the approved stack and reuse Feature 003's chokepoints rather than adding new ones. `src/lib/fileOpen.ts` already owns every Tauri dialog/fs/window call — extend it with a `saveMarkdownFile(path, content)` helper (and update the header comment to reflect that the module now covers I/O, not just open). `src/lib/preferences.ts` already owns every `localStorage` access — extend it with `getAutoSave()` / `setAutoSave(on)` keyed on `milf.autoSave`. The modified state is **derived**, not stored: hold the last-successfully-saved text in a `savedText` `useState` field, and compute `isModified = text !== savedText` at render time. Auto-save is one `useEffect` that watches `[text, autoSave, openedFile, savedText, saving]` and schedules a single `setTimeout` on the trailing edge. Concurrent writes are serialised via a `saving` flag plus a small ref-held "needs another save after this one" boolean — the simplest correct mutex for a single-renderer webview. One new capability (`fs:allow-write-text-file`) joins the existing read capability; no new npm or cargo dependencies are introduced.
+Technical approach: stay on the approved stack and reuse Feature 003's chokepoints rather than adding new ones. `src/lib/fileOpen.ts` already owns every Tauri dialog/fs/window call — extend it with a `saveMarkdownFile(path, content)` helper (and update the header comment to reflect that the module now covers I/O, not just open). `src/lib/preferences.ts` already owns every `localStorage` access — extend it with `getAutoSave()` / `setAutoSave(on)` keyed on `markpad.autoSave`. The modified state is **derived**, not stored: hold the last-successfully-saved text in a `savedText` `useState` field, and compute `isModified = text !== savedText` at render time. Auto-save is one `useEffect` that watches `[text, autoSave, openedFile, savedText, saving]` and schedules a single `setTimeout` on the trailing edge. Concurrent writes are serialised via a `saving` flag plus a small ref-held "needs another save after this one" boolean — the simplest correct mutex for a single-renderer webview. One new capability (`fs:allow-write-text-file`) joins the existing read capability; no new npm or cargo dependencies are introduced.
 
 ## Technical Context
 
@@ -21,7 +21,7 @@ Technical approach: stay on the approved stack and reuse Feature 003's chokepoin
 - No new dev deps.
 
 **Storage**:
-- `localStorage` in the webview, three keys total now: the existing `milf.theme` and `milf.viewMode` plus the new `milf.autoSave` (`"on" | "off"`). Same `try/catch` + whitelist pattern as Feature 003 (FR-019, FR-020).
+- `localStorage` in the webview, three keys total now: the existing `markpad.theme` and `markpad.viewMode` plus the new `markpad.autoSave` (`"on" | "off"`). Same `try/catch` + whitelist pattern as Feature 003 (FR-019, FR-020).
 - Read/write access to user-picked text files via `tauri-plugin-fs`. The path the dialog returned in Feature 003 is reused as the write target; no new dialog is shown.
 - No new long-lived state on the Rust side. `savedText`, `saving`, and the auto-save timer all live in React state / refs in `App.tsx`.
 
@@ -72,7 +72,7 @@ Technical approach: stay on the approved stack and reuse Feature 003's chokepoin
 
 **Decision**: Gate passes for this feature. Principle IX gap is pre-existing and tracked.
 
-**Post-design re-check** (after `research.md` + `data-model.md` + `contracts/` + `quickstart.md`): No new violations introduced. The design adds zero runtime dependencies, extends two existing lib modules (no new chokepoints), introduces one preference key under the established `milf.*` namespace, and tightens the existing `fs:` capability list by adding one specifically-scoped permission rather than relaxing what is already there. State management stays on local React state (Principle I), with one new ref used as a tiny serialisation mutex — well below the threshold where Context becomes warranted (Principle VIII / constitution Tech Constraints).
+**Post-design re-check** (after `research.md` + `data-model.md` + `contracts/` + `quickstart.md`): No new violations introduced. The design adds zero runtime dependencies, extends two existing lib modules (no new chokepoints), introduces one preference key under the established `markpad.*` namespace, and tightens the existing `fs:` capability list by adding one specifically-scoped permission rather than relaxing what is already there. State management stays on local React state (Principle I), with one new ref used as a tiny serialisation mutex — well below the threshold where Context becomes warranted (Principle VIII / constitution Tech Constraints).
 
 ## Project Structure
 
@@ -93,7 +93,7 @@ specs/004-save-file-controls/
 ### Source Code (repository root)
 
 ```text
-milf/
+markpad/
 ├── src/                              # React + TypeScript frontend
 │   ├── main.tsx                      # UNCHANGED
 │   ├── App.tsx                       # UPDATE: add savedText / autoSave / saving state; handleSave + auto-save effect; render FileHeader
@@ -108,7 +108,7 @@ milf/
 │   ├── lib/
 │   │   ├── markdown.ts               # UNCHANGED
 │   │   ├── starterContent.ts         # UNCHANGED
-│   │   ├── preferences.ts            # UPDATE: add getAutoSave / setAutoSave; new key milf.autoSave
+│   │   ├── preferences.ts            # UPDATE: add getAutoSave / setAutoSave; new key markpad.autoSave
 │   │   └── fileOpen.ts               # UPDATE: add saveMarkdownFile(path, content); update header comment
 │   └── vite-env.d.ts                 # UNCHANGED
 ├── src-tauri/

@@ -10,7 +10,7 @@
 
 ## Overview
 
-MILF can open, edit, save, and preview markdown, but every formatting mark
+markpad can open, edit, save, and preview markdown, but every formatting mark
 (`**`, `#`, `- `, `> `, fenced code, links, tables) has to be typed by hand.
 This feature adds a compact formatting toolbar to the editor island that
 applies the fundamental markdown constructs to the current selection with a
@@ -30,7 +30,7 @@ They put the cursor on a heading line and click **Heading 2**; the line becomes
 Everything happens in the editor they already have focus in — no dialogs, no
 loss of cursor position — and the live preview updates as usual.
 
-**Why this priority**: This is the headline of the feature — turning MILF from a
+**Why this priority**: This is the headline of the feature — turning markpad from a
 plain-text markdown box into an editor where the common constructs are one click
 away. Without it the toolbar has no reason to exist.
 
@@ -146,7 +146,7 @@ but not required for the core editing capability.
   selection via `aria-pressed`; insert actions MUST NOT.
 - **FR-008**: The toolbar MUST be present only when editing is possible — hidden
   in pure Preview mode and absent when no file is open.
-- **FR-009**: Every emitted construct MUST render correctly in MILF's existing
+- **FR-009**: Every emitted construct MUST render correctly in markpad's existing
   preview pipeline (markdown-it default preset + DOMPurify); actions that would
   render as literal/unstyled text MUST NOT ship.
 - **FR-010**: The toolbar MUST reuse the existing design tokens and MUST be

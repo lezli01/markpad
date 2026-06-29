@@ -1,4 +1,0 @@
-interface:
-  display_name: "MILF README Updater"
-  short_description: "Refresh README content, images, and features"
-  default_prompt: "Use $milf-update-readme before merging this PR to refresh README.md."

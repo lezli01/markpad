@@ -1,17 +1,17 @@
 {
-  "name": "milf",
+  "name": "markpad",
   "private": true,
-  "description": "Markdown Interface & Live Formatter",
+  "description": "Markdown editor with live preview",
   "version": "0.5.0",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lezli01/milf.git"
+    "url": "git+https://github.com/lezli01/markpad.git"
   },
   "bugs": {
-    "url": "https://github.com/lezli01/milf/issues"
+    "url": "https://github.com/lezli01/markpad/issues"
   },
-  "homepage": "https://github.com/lezli01/milf#readme",
+  "homepage": "https://github.com/lezli01/markpad#readme",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -1,6 +1,6 @@
 # Phase 1 — Component Contracts: Save Controls and Active File Header
 
-MILF's primary external interface is still its UI. This feature adds **one new component** (`<FileHeader />`), updates `<App />` and `<Toolbar />`, extends **two existing lib modules** (`preferences.ts`, `fileOpen.ts`), and adds **one capability entry** (`fs:allow-write-text-file`). No new Tauri custom commands, no new npm or cargo dependencies, no new lib modules.
+markpad's primary external interface is still its UI. This feature adds **one new component** (`<FileHeader />`), updates `<App />` and `<Toolbar />`, extends **two existing lib modules** (`preferences.ts`, `fileOpen.ts`), and adds **one capability entry** (`fs:allow-write-text-file`). No new Tauri custom commands, no new npm or cargo dependencies, no new lib modules.
 
 ## Conventions (carried over from Features 002 and 003)
 
@@ -189,7 +189,7 @@ No prop changes.
 
 **File**: `src/lib/preferences.ts`
 
-**Role**: The single chokepoint for reading and writing user preferences. Extends Feature 003's three-pref namespace (`milf.theme`, `milf.viewMode`) with one new key (`milf.autoSave`).
+**Role**: The single chokepoint for reading and writing user preferences. Extends Feature 003's three-pref namespace (`markpad.theme`, `markpad.viewMode`) with one new key (`markpad.autoSave`).
 
 **New exports**:
 
@@ -202,18 +202,18 @@ export function setAutoSave(on: boolean): void;
 
 **Behavior**:
 - `getAutoSave()`:
-  1. Read `localStorage.getItem("milf.autoSave")` inside a try/catch.
+  1. Read `localStorage.getItem("markpad.autoSave")` inside a try/catch.
   2. If the value is the literal string `"on"`, return `true`.
   3. If the value is the literal string `"off"`, return `false`.
   4. For any other value (including `null` and any malformed entry), return `false` (the documented default — FR-020).
   5. If `localStorage` throws (storage disabled, quota), the catch returns `false`.
 - `setAutoSave(on)`:
   - No validation on `on` because the TypeScript signature already constrains it to a boolean.
-  - Writes `localStorage.setItem("milf.autoSave", on ? "on" : "off")` inside a try/catch.
+  - Writes `localStorage.setItem("markpad.autoSave", on ? "on" : "off")` inside a try/catch.
   - A write failure is logged via `console.warn` but does not throw to the caller — same best-effort pattern as `setTheme` / `setViewMode`.
 
 **Contract assertions**:
-- Only this module imports/calls `localStorage`. Reviewers can grep for `localStorage` to confirm. (Carried over from Feature 003. The `index.html` bootstrap script is the documented exception — it reads `milf.theme` directly because it must run before any module loads. The bootstrap script does NOT read `milf.autoSave`, because auto-save has no first-paint impact.)
+- Only this module imports/calls `localStorage`. Reviewers can grep for `localStorage` to confirm. (Carried over from Feature 003. The `index.html` bootstrap script is the documented exception — it reads `markpad.theme` directly because it must run before any module loads. The bootstrap script does NOT read `markpad.autoSave`, because auto-save has no first-paint impact.)
 - All six functions are synchronous and safe to call during React render or in `useState` initialisers.
 - The whitelist for `autoSave` is duplicated as a runtime check, so a hand-edited storage entry cannot poison the app — it just falls back to `false`.
 
@@ -300,7 +300,7 @@ This grants `writeTextFile` access exactly to paths the user has explicitly open
 
 ### `index.html` — UNCHANGED
 
-The bootstrap script reads only `milf.theme` (for the no-flash-of-wrong-theme effect). Auto-save has no first-paint impact, so the bootstrap does not read `milf.autoSave`. No change needed.
+The bootstrap script reads only `markpad.theme` (for the no-flash-of-wrong-theme effect). Auto-save has no first-paint impact, so the bootstrap does not read `markpad.autoSave`. No change needed.
 
 ---
 

@@ -1,6 +1,6 @@
-# MILF Architecture
+# markpad Architecture
 
-MILF is a cross-platform desktop Markdown editor/viewer.
+markpad is a cross-platform desktop Markdown editor/viewer.
 
 ## Frontend
 

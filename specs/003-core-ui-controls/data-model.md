@@ -19,8 +19,8 @@ A small, flat set of user choices that the app reads on launch and writes when t
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `theme` | `"light" \| "dark"` | resolved from system on first launch | FR-014, FR-016, FR-018. Stored under `localStorage["milf.theme"]`. |
-| `viewMode` | `"editor" \| "preview" \| "split"` | `"split"` | FR-008, FR-019. Stored under `localStorage["milf.viewMode"]`. |
+| `theme` | `"light" \| "dark"` | resolved from system on first launch | FR-014, FR-016, FR-018. Stored under `localStorage["markpad.theme"]`. |
+| `viewMode` | `"editor" \| "preview" \| "split"` | `"split"` | FR-008, FR-019. Stored under `localStorage["markpad.viewMode"]`. |
 
 **Validation rules**:
 - On read, any value outside the allowed set (including `null`, malformed JSON, an old key the app no longer recognises) is treated as **absent** and the documented default is used instead (FR-020). The app does not throw, and does not block launch.
@@ -32,7 +32,7 @@ A small, flat set of user choices that the app reads on launch and writes when t
                        app launch
                             │
                             ▼
-              read localStorage["milf.theme"]
+              read localStorage["markpad.theme"]
                             │
               ┌────────────┴────────────┐
               ▼                         ▼
@@ -51,7 +51,7 @@ A small, flat set of user choices that the app reads on launch and writes when t
            theme = "light" ⇄ "dark"
                             │
                             ▼
-        write localStorage["milf.theme"]
+        write localStorage["markpad.theme"]
         set <html data-theme="...">
 ```
 
@@ -75,19 +75,19 @@ A lightweight record of which file currently backs the editor's content. This is
                   │
                   ▼
        openedFile = null
-        title = "MILF"
+        title = "markpad"
                   │
         user picks file (success)
                   │
                   ▼
        openedFile = { name, path }
-        title = `${name} — MILF`
+        title = `${name} — markpad`
                   │
         user picks another file
                   │
                   ▼
        openedFile = new { name, path }   (text replaced too)
-        title = `${name} — MILF`
+        title = `${name} — markpad`
                   │
         user cancels dialog
                   │
@@ -139,8 +139,8 @@ Only one error is held at a time; a new error overwrites the previous one. Succe
 ```text
 App
  ├── state: text                  (Document.text — unchanged from 002)
- ├── state: theme                 (Preferences)         ──persisted──▶ localStorage["milf.theme"]
- ├── state: viewMode              (Preferences)         ──persisted──▶ localStorage["milf.viewMode"]
+ ├── state: theme                 (Preferences)         ──persisted──▶ localStorage["markpad.theme"]
+ ├── state: viewMode              (Preferences)         ──persisted──▶ localStorage["markpad.viewMode"]
  ├── state: openedFile            (OpenedFileReference) ──session only
  ├── state: error                 (Error Banner)        ──session only
  │

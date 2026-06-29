@@ -3,7 +3,7 @@
   "packages": {
     ".": {
       "release-type": "node",
-      "package-name": "milf",
+      "package-name": "markpad",
       "include-component-in-tag": false,
       "extra-files": [
         {

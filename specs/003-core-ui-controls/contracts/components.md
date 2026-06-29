@@ -1,6 +1,6 @@
 # Phase 1 — Component Contracts: Core Workspace Controls
 
-MILF's primary external interface is still its UI. This feature adds two new components (`<Toolbar />`, `<ErrorBanner />`), two new `lib/` modules (`preferences.ts`, `fileOpen.ts`), and updates `<App />` and `<Workspace />` to wire them in. No new Tauri custom commands are introduced; we configure the official `tauri-plugin-dialog` and `tauri-plugin-fs` plugins instead.
+markpad's primary external interface is still its UI. This feature adds two new components (`<Toolbar />`, `<ErrorBanner />`), two new `lib/` modules (`preferences.ts`, `fileOpen.ts`), and updates `<App />` and `<Workspace />` to wire them in. No new Tauri custom commands are introduced; we configure the official `tauri-plugin-dialog` and `tauri-plugin-fs` plugins instead.
 
 ## Conventions (carried over from Feature 002)
 
@@ -169,13 +169,13 @@ export function setViewMode(mode: ViewMode): void;
 
 **Behavior**:
 - `getTheme()`:
-  1. Read `localStorage.getItem("milf.theme")` inside a try/catch.
+  1. Read `localStorage.getItem("markpad.theme")` inside a try/catch.
   2. If the value is `"light"` or `"dark"`, return it.
   3. Otherwise, return `window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"`.
   4. If `matchMedia` is unavailable (defensive), return `"light"`.
 - `setTheme(theme)`:
   - Validates `theme` is in the allowed set; throws a `TypeError` if not (this is an internal invariant — App-supplied values are typed).
-  - Writes `localStorage.setItem("milf.theme", theme)` inside try/catch — a write failure is logged with `console.warn` but does not throw to the caller.
+  - Writes `localStorage.setItem("markpad.theme", theme)` inside try/catch — a write failure is logged with `console.warn` but does not throw to the caller.
 - `getViewMode()` / `setViewMode(mode)`: same shape, with allowed values `"editor" | "preview" | "split"` and the default branch returning `"split"`.
 
 **Contract assertions**:
@@ -222,8 +222,8 @@ export function setWindowTitle(fileName: string | null): Promise<void>;
   4. On success, return `{ kind: "ok", name: basename(path), path, content }`.
   5. On any thrown error, return `{ kind: "error", message: friendlyMessage(err) }`. The friendly message is one of a small set of plain-language strings; the raw error is logged via `console.warn` for debugging but never shown to the user.
 - `setWindowTitle(name)`:
-  - If `name` is null, call `getCurrentWebviewWindow().setTitle("MILF")`.
-  - Otherwise, call `getCurrentWebviewWindow().setTitle(`${name} — MILF`)`.
+  - If `name` is null, call `getCurrentWebviewWindow().setTitle("markpad")`.
+  - Otherwise, call `getCurrentWebviewWindow().setTitle(`${name} — markpad`)`.
   - Wraps the call in try/catch; a failure logs `console.warn` but does not throw.
 
 **Contract assertions**:
@@ -296,7 +296,7 @@ Add a tiny bootstrap script in `<head>` that sets `<html data-theme="...">` befo
 <script>
   (function () {
     try {
-      var stored = localStorage.getItem("milf.theme");
+      var stored = localStorage.getItem("markpad.theme");
       var theme =
         stored === "light" || stored === "dark"
           ? stored

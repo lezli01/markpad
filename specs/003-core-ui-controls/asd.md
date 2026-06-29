@@ -1,10 +1,10 @@
-# Welcome to MILF
+# Welcome to markpad
 asd
 
 
 asd
 
-**MILF** (Markdown Interface & Live Formatter) is a tiny desktop app that turns plain text into formatted reading on the fly.
+**markpad** (Markdown editor with live preview) is a tiny desktop app that turns plain text into formatted reading on the fly.
 
 ## What you're looking at
 

@@ -85,7 +85,7 @@ specs/002-split-pane-editor-layout/
 ### Source Code (repository root)
 
 ```text
-milf/
+markpad/
 ├── src/                              # React + TypeScript frontend
 │   ├── main.tsx                      # Existing; switch CSS import to ./styles.css
 │   ├── App.tsx                       # REPLACE: renders <Workspace />
@@ -105,7 +105,7 @@ milf/
 │   ├── Cargo.toml
 │   ├── tauri.conf.json               # MAY tweak window default size only
 │   └── capabilities/default.json
-├── index.html                        # Update <title> from default Tauri text to "MILF"
+├── index.html                        # Update <title> from default Tauri text to "markpad"
 ├── package.json                      # Add new deps listed in Technical Context
 ├── vite.config.ts                    # Add @tailwindcss/vite plugin
 └── tsconfig.json                     # Unchanged

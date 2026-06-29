@@ -33,8 +33,8 @@
 
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`.
 - The spec makes informed defaults for several decisions rather than emitting `[NEEDS CLARIFICATION]` markers — these decisions are documented in the **Assumptions** section of the spec and can be revisited via `/speckit-clarify` if the user disagrees with any of them. The most notable ones:
-  - **Default-handler registration**: spec assumes the OS-level configuration of MILF as the default `.md` handler is the user's responsibility through OS settings; MILF only handles activations once routed (Assumption 1).
-  - **Single instance is per-user-session**: spec assumes one running MILF per logged-in OS user; multi-user routing is out of scope (Assumption 2).
+  - **Default-handler registration**: spec assumes the OS-level configuration of markpad as the default `.md` handler is the user's responsibility through OS settings; markpad only handles activations once routed (Assumption 1).
+  - **Single instance is per-user-session**: spec assumes one running markpad per logged-in OS user; multi-user routing is out of scope (Assumption 2).
   - **In-memory unsaved edits do not persist across launches**: session restore reopens files from disk; only file paths and the active-tab pointer are persisted (Assumption 4 and FR-021).
   - **Active-tab precedence when CLI args + session both present**: last successfully opened CLI argument wins, overriding the saved active-tab pointer (FR-013, FR-022).
   - **Bad file paths silently skipped, no error dialog**: applies uniformly to missing CLI args (FR-012) and missing session entries (FR-016).

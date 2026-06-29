@@ -115,7 +115,7 @@ pub fn route_paths(app: &tauri::AppHandle, paths: Vec<PathBuf>) {
         let payload = json!({
             "paths": paths.iter().map(|p| p.to_string_lossy().into_owned()).collect::<Vec<_>>()
         });
-        let _ = app.emit("milf://open-files", payload);
+        let _ = app.emit("markpad://open-files", payload);
     } else {
         pending.extend(paths);
     }

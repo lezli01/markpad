@@ -6,7 +6,7 @@ labels:
 body:
   - type: markdown
     attributes:
-      value: "Thanks for helping improve MILF. Please include enough detail for someone else to reproduce the issue."
+      value: "Thanks for helping improve markpad. Please include enough detail for someone else to reproduce the issue."
   - type: textarea
     id: summary
     attributes:

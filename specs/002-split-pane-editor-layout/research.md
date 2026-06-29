@@ -114,7 +114,7 @@ This document resolves the open technical questions in `plan.md`. Each section c
 
 ## 6. Starter content (FR-007, User Story 3)
 
-**Decision**: Ship a short, friendly markdown document in `src/lib/starterContent.ts` exported as a default string. It introduces MILF in one sentence, demonstrates a heading, bold/italic, a list, a link, and an inline code span — enough to make the preview visually distinct from the raw text and let a new user immediately see the correspondence.
+**Decision**: Ship a short, friendly markdown document in `src/lib/starterContent.ts` exported as a default string. It introduces markpad in one sentence, demonstrates a heading, bold/italic, a list, a link, and an inline code span — enough to make the preview visually distinct from the raw text and let a new user immediately see the correspondence.
 
 **Rationale**:
 - A static string is the simplest possible source. No JSON, no fetch, no i18n machinery (out of scope per spec Assumptions).
