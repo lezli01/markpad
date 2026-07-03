@@ -8,7 +8,7 @@ import {
 import { EditorState, Prec, type StateEffect } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import { markdown } from "@codemirror/lang-markdown";
+import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import {
   type FormatAction,
   getActiveFormatActions,
@@ -117,7 +117,9 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           // over any default binding for the same chord.
           Prec.high(keymap.of([...markdownFormattingKeymap])),
           keymap.of([...defaultKeymap, ...historyKeymap]),
-          markdown(),
+          // GFM base so ~~strikethrough~~ parses as a real `Strikethrough`
+          // node — toolbar toggle detection reads the parsed tree.
+          markdown({ base: markdownLanguage }),
           EditorView.lineWrapping,
           editorTheme,
           EditorView.updateListener.of((update) => {

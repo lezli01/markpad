@@ -14,7 +14,10 @@ import {
   EditorSelection,
   type ChangeSpec,
   type EditorState,
+  type SelectionRange,
 } from "@codemirror/state";
+import { syntaxTree } from "@codemirror/language";
+import type { SyntaxNode } from "@lezer/common";
 
 export type FormatAction =
   | "bold"
@@ -50,6 +53,108 @@ export type FormatActionDef = {
   /** Pure detection mirroring `run`; only present for toggle actions. */
   isActive?: (state: EditorState) => boolean;
 };
+
+// ---------------------------------------------------------------------------
+// Syntax-tree detection (inline emphasis)
+//
+// Inline toggle detection reads the parsed Markdown (Lezer) tree instead of
+// scanning raw markers, so it is correct for multi-word spans (a caret anywhere
+// inside **hello world** lights Bold) and nested emphasis (a caret in the
+// italic word of **a *b* c** lights BOTH Bold and Italic). It requires the
+// editor to parse with the GFM `markdownLanguage` base so that ~~strike~~
+// becomes a real `Strikethrough` node (see Editor.tsx). The block toggles
+// (headings/lists/blockquote) deliberately stay line-based — see `lineActive`.
+// ---------------------------------------------------------------------------
+
+/** Lezer node name(s) for each inline emphasis marker. */
+const INLINE_NODE: Record<string, ReadonlySet<string>> = {
+  "**": new Set(["StrongEmphasis"]),
+  "*": new Set(["Emphasis"]),
+  "~~": new Set(["Strikethrough"]),
+};
+const INLINE_CODE_NODE: ReadonlySet<string> = new Set(["InlineCode"]);
+
+/**
+ * Innermost ancestor of the range `[from, to]` whose node name is in `names`,
+ * or null. For a collapsed cursor both sides of the position are probed so a
+ * caret touching either edge of a span still resolves into it; the match must
+ * still fully contain the range.
+ */
+function enclosingNode(
+  state: EditorState,
+  names: ReadonlySet<string>,
+  from: number,
+  to: number,
+): SyntaxNode | null {
+  const tree = syntaxTree(state);
+  const sides: (-1 | 1)[] = from === to ? [-1, 1] : [1];
+  for (const side of sides) {
+    for (
+      let n: SyntaxNode | null = tree.resolveInner(from, side);
+      n;
+      n = n.parent
+    ) {
+      if (names.has(n.name) && n.from <= from && n.to >= to) return n;
+    }
+  }
+  return null;
+}
+
+/**
+ * The inline span (of one of `names`) that a collapsed caret sits *inside the
+ * content of*, or that a non-empty selection lies within — else null. The span
+ * must be well-formed: distinct opening/closing `*Mark` children, so callers
+ * can safely unwrap it. A caret exactly outside the markers is NOT inside.
+ */
+function enclosingInlineSpan(
+  state: EditorState,
+  names: ReadonlySet<string>,
+  from: number,
+  to: number,
+): SyntaxNode | null {
+  const node = enclosingNode(state, names, from, to);
+  if (!node) return null;
+  const open = node.firstChild;
+  const close = node.lastChild;
+  if (
+    !open ||
+    !close ||
+    open === close ||
+    !open.name.endsWith("Mark") ||
+    !close.name.endsWith("Mark")
+  ) {
+    return null;
+  }
+  if (from !== to) return node;
+  // Collapsed caret: require it to sit within the content between the markers.
+  return open.to <= from && from <= close.from ? node : null;
+}
+
+/** Changes stripping an inline span's opening/closing markers, keeping the
+ * caret/selection over the now-unwrapped content. */
+function unwrapInlineChanges(
+  state: EditorState,
+  node: SyntaxNode,
+  range: SelectionRange,
+  extra: readonly ChangeSpec[] = [],
+) {
+  const open = node.firstChild!;
+  const close = node.lastChild!;
+  const changes = state.changes([
+    { from: open.from, to: open.to },
+    { from: close.from, to: close.to },
+    ...extra,
+  ]);
+  return {
+    changes,
+    range: range.empty
+      ? EditorSelection.cursor(changes.mapPos(range.from, -1))
+      : EditorSelection.range(
+          changes.mapPos(range.from, 1),
+          changes.mapPos(range.to, -1),
+        ),
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Inline wrap toggles: **bold**, *italic*, ~~strike~~, `code`
@@ -133,72 +238,70 @@ function toggleWrapAround(
   };
 }
 
-function wrapInline(marker: string): MarkdownCommand {
+/**
+ * Transaction toggling `marker` around each selection range. Exported for
+ * headless unit tests (apply with `state.update(...)`); `wrapInline` wires it
+ * to a view. When a range already sits inside a parsed span of this marker's
+ * type, the whole span is unwrapped — so clicking Bold with the caret anywhere
+ * inside **hello world** turns the bold off, matching what the toggle shows.
+ */
+export function inlineToggleTransaction(state: EditorState, marker: string) {
   const len = marker.length;
-  return (view) => {
-    const { state } = view;
-    const tr = state.changeByRange((range) => {
-      if (!range.empty) {
-        return toggleWrapAround(state, marker, len, range.from, range.to);
-      }
-      const pos = range.from;
-      // Cursor sitting between an existing pair → toggle off.
-      if (
-        markerEndsAt(state, marker, len, pos) &&
-        markerStartsAt(state, marker, len, pos)
-      ) {
-        return {
-          changes: [
-            { from: pos - len, to: pos },
-            { from: pos, to: pos + len },
-          ],
-          range: EditorSelection.cursor(pos - len),
-        };
-      }
-      // Wrap the word under the cursor when there is one, selecting it so a
-      // follow-up keystroke replaces it.
-      const word = state.wordAt(pos);
-      if (word) {
-        return toggleWrapAround(state, marker, len, word.from, word.to);
-      }
-      // Otherwise drop empty markers and place the caret between them.
+  const names = INLINE_NODE[marker];
+  return state.changeByRange((range) => {
+    const span = names
+      ? enclosingInlineSpan(state, names, range.from, range.to)
+      : null;
+    if (span) return unwrapInlineChanges(state, span, range);
+
+    if (!range.empty) {
+      return toggleWrapAround(state, marker, len, range.from, range.to);
+    }
+    const pos = range.from;
+    // Cursor sitting between a bare (unparsed) pair → toggle off. Covers empty
+    // markers `**|**` that have no content and so are not a Strong/Em node.
+    if (
+      markerEndsAt(state, marker, len, pos) &&
+      markerStartsAt(state, marker, len, pos)
+    ) {
       return {
-        changes: { from: pos, insert: marker + marker },
-        range: EditorSelection.cursor(pos + len),
+        changes: [
+          { from: pos - len, to: pos },
+          { from: pos, to: pos + len },
+        ],
+        range: EditorSelection.cursor(pos - len),
       };
+    }
+    // Wrap the word under the cursor when there is one, selecting it so a
+    // follow-up keystroke replaces it.
+    const word = state.wordAt(pos);
+    if (word) {
+      return toggleWrapAround(state, marker, len, word.from, word.to);
+    }
+    // Otherwise drop empty markers and place the caret between them.
+    return {
+      changes: { from: pos, insert: marker + marker },
+      range: EditorSelection.cursor(pos + len),
+    };
+  });
+}
+
+function wrapInline(marker: string): MarkdownCommand {
+  return (view) => {
+    view.dispatch({
+      ...inlineToggleTransaction(view.state, marker),
+      scrollIntoView: true,
     });
-    view.dispatch({ ...tr, scrollIntoView: true });
     return true;
   };
 }
 
 function inlineActive(marker: string): (state: EditorState) => boolean {
-  const len = marker.length;
+  const names = INLINE_NODE[marker];
   return (state) => {
-    const range = state.selection.main;
-    let from = range.from;
-    let to = range.to;
-    if (range.empty) {
-      const pos = range.from;
-      if (
-        markerEndsAt(state, marker, len, pos) &&
-        markerStartsAt(state, marker, len, pos)
-      ) {
-        return true;
-      }
-      const word = state.wordAt(pos);
-      if (!word) return false;
-      from = word.from;
-      to = word.to;
-    }
-    const sel = state.sliceDoc(from, to);
-    if (sel.length > 2 * len && sel.startsWith(marker) && sel.endsWith(marker)) {
-      return true;
-    }
-    return (
-      markerEndsAt(state, marker, len, from) &&
-      markerStartsAt(state, marker, len, to)
-    );
+    if (!names) return false;
+    const { from, to } = state.selection.main;
+    return enclosingInlineSpan(state, names, from, to) !== null;
   };
 }
 
@@ -213,9 +316,37 @@ function longestBacktickRun(text: string): number {
   return (text.match(/`+/g) ?? []).reduce((m, r) => Math.max(m, r.length), 0);
 }
 
-const inlineCodeCommand: MarkdownCommand = (view) => {
-  const { state } = view;
-  const tr = state.changeByRange((range) => {
+/**
+ * Transaction toggling an inline-code span for each range. Exported for
+ * headless unit tests; `inlineCodeCommand` wires it to a view. A caret inside a
+ * parsed `InlineCode` node unwraps the whole span (dropping the fences and one
+ * padding space per side, mirroring how it was wrapped).
+ */
+export function inlineCodeToggleTransaction(state: EditorState) {
+  return state.changeByRange((range) => {
+    const span = enclosingInlineSpan(
+      state,
+      INLINE_CODE_NODE,
+      range.from,
+      range.to,
+    );
+    if (span) {
+      const open = span.firstChild!;
+      const close = span.lastChild!;
+      const inner = state.sliceDoc(open.to, close.from);
+      const extra: ChangeSpec[] = [];
+      if (
+        inner.length >= 2 &&
+        inner.startsWith(" ") &&
+        inner.endsWith(" ") &&
+        inner.trim().length > 0
+      ) {
+        extra.push({ from: open.to, to: open.to + 1 });
+        extra.push({ from: close.from - 1, to: close.from });
+      }
+      return unwrapInlineChanges(state, span, range, extra);
+    }
+
     let from = range.from;
     let to = range.to;
     if (range.empty) {
@@ -231,22 +362,22 @@ const inlineCodeCommand: MarkdownCommand = (view) => {
       to = word.to;
     }
     const sel = state.sliceDoc(from, to);
-    // Unwrap an existing span: equal-length backtick runs on both ends.
-    const open = /^`+/.exec(sel)?.[0].length ?? 0;
-    const close = /`+$/.exec(sel)?.[0].length ?? 0;
-    if (open > 0 && open === close && sel.length >= 2 * open) {
-      let inner = sel.slice(open, sel.length - open);
+    // Unwrap a bare (unparsed) span: equal-length backtick runs on both ends.
+    const openLen = /^`+/.exec(sel)?.[0].length ?? 0;
+    const closeLen = /`+$/.exec(sel)?.[0].length ?? 0;
+    if (openLen > 0 && openLen === closeLen && sel.length >= 2 * openLen) {
+      let text = sel.slice(openLen, sel.length - openLen);
       if (
-        inner.length >= 2 &&
-        inner.startsWith(" ") &&
-        inner.endsWith(" ") &&
-        inner.trim().length > 0
+        text.length >= 2 &&
+        text.startsWith(" ") &&
+        text.endsWith(" ") &&
+        text.trim().length > 0
       ) {
-        inner = inner.slice(1, inner.length - 1);
+        text = text.slice(1, text.length - 1);
       }
       return {
-        changes: { from, to, insert: inner },
-        range: EditorSelection.range(from, from + inner.length),
+        changes: { from, to, insert: text },
+        range: EditorSelection.range(from, from + text.length),
       };
     }
     // Wrap with a fence long enough to survive interior backticks.
@@ -259,34 +390,19 @@ const inlineCodeCommand: MarkdownCommand = (view) => {
       range: EditorSelection.range(from + lead, from + lead + sel.length),
     };
   });
-  view.dispatch({ ...tr, scrollIntoView: true });
+}
+
+const inlineCodeCommand: MarkdownCommand = (view) => {
+  view.dispatch({
+    ...inlineCodeToggleTransaction(view.state),
+    scrollIntoView: true,
+  });
   return true;
 };
 
 function inlineCodeActive(state: EditorState): boolean {
-  const range = state.selection.main;
-  let from = range.from;
-  let to = range.to;
-  if (range.empty) {
-    const pos = range.from;
-    if (
-      state.sliceDoc(pos - 1, pos) === "`" &&
-      state.sliceDoc(pos, pos + 1) === "`"
-    ) {
-      return true;
-    }
-    const word = state.wordAt(pos);
-    if (!word) return false;
-    from = word.from;
-    to = word.to;
-  }
-  const sel = state.sliceDoc(from, to);
-  const open = /^`+/.exec(sel)?.[0].length ?? 0;
-  const close = /`+$/.exec(sel)?.[0].length ?? 0;
-  if (open > 0 && open === close && sel.length >= 2 * open) return true;
-  return (
-    state.sliceDoc(from - 1, from) === "`" && state.sliceDoc(to, to + 1) === "`"
-  );
+  const { from, to } = state.selection.main;
+  return enclosingInlineSpan(state, INLINE_CODE_NODE, from, to) !== null;
 }
 
 // ---------------------------------------------------------------------------
@@ -361,6 +477,19 @@ function makeLinePrefix(rule: LineRule): MarkdownCommand {
   };
 }
 
+/**
+ * Line-prefix detector for the block toggles (headings, lists, blockquote).
+ *
+ * These stay line-anchored — matching the caret's own line against the same
+ * raw prefix `makeLinePrefix` strips — rather than reading the syntax tree, so
+ * DETECTION and MUTATION always agree: a toggle lights exactly when clicking it
+ * can turn the block off. A tree-based detector would light on lines the
+ * line-prefix mutation cannot strip (setext headings, an ATX heading nested in
+ * a blockquote, or a soft-wrapped list/quote continuation line), so clicking
+ * would insert a stray marker and corrupt the document instead of toggling.
+ * (Inline emphasis is different: there both detection AND the run were moved to
+ * the tree together, so they remain consistent.)
+ */
 function lineActive(rule: LineRule): (state: EditorState) => boolean {
   return (state) => {
     const line = state.doc.lineAt(state.selection.main.head);
