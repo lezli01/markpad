@@ -4,10 +4,10 @@ type ErrorBannerProps = {
 };
 
 const bannerShell =
-  "flex items-center gap-3 rounded-2xl bg-amber-100/90 dark:bg-amber-900/40 text-amber-900 dark:text-amber-100 ring-1 ring-amber-300/60 dark:ring-amber-700/60 shadow-sm px-4 py-2";
+  "flex items-center gap-3 border-b border-[color:var(--border)] border-l-2 border-l-amber-500 bg-amber-500/10 px-4 py-2 text-[color:var(--text)]";
 
 const dismissButton =
-  "ml-auto inline-flex h-7 w-7 items-center justify-center rounded-md text-amber-900 dark:text-amber-100 hover:bg-amber-200/60 dark:hover:bg-amber-800/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500";
+  "ml-auto inline-flex h-7 w-7 items-center justify-center rounded-md text-[color:var(--muted)] hover:text-[color:var(--text)] hover:bg-[color:var(--hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]";
 
 function CloseIcon() {
   return (

@@ -15,18 +15,16 @@ type WorkspaceProps = {
   previewRef?: Ref<PreviewHandle>;
 };
 
-const islandCard =
-  "flex-1 min-w-0 min-h-0 min-h-[200px] flex flex-col rounded-2xl bg-[color:var(--islands-surface)] ring-1 ring-[color:var(--islands-ring)] shadow-sm backdrop-blur overflow-hidden";
+// Flat, edge-to-edge panes (no rounded "island" cards, no gaps). Panes share the
+// main surface and are separated only by a hairline divider in split view.
+const pane =
+  "flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden bg-[color:var(--bg)]";
 
-const islandLabel =
-  "text-xs uppercase tracking-wide text-[color:var(--islands-muted)] px-4 pt-3 pb-1 select-none";
+const paneHeader =
+  "flex items-center justify-between gap-2 px-4 py-2 border-b border-[color:var(--border)]";
 
-// The editor island's header carries the formatting toolbar alongside the
-// label, so it inherits the section's `hidden` in preview mode (below) for free.
-const editorHeader = "flex items-center justify-between gap-2 px-4 pt-3 pb-2";
-
-const islandLabelInline =
-  "text-xs uppercase tracking-wide text-[color:var(--islands-muted)] select-none";
+const paneLabel =
+  "text-xs font-medium uppercase tracking-wide text-[color:var(--muted)] select-none";
 
 export default function Workspace({
   text,
@@ -45,28 +43,33 @@ export default function Workspace({
   // not unmounted. Preview is pure and may be conditionally rendered.
   const editorHidden = viewMode === "preview";
   const previewMounted = viewMode !== "editor";
+  const isSplit = viewMode === "split";
 
-  // Responsive stacking from Feature 002 only applies in split mode.
-  const layoutClass =
-    viewMode === "split"
-      ? "flex flex-col md:flex-row gap-4 h-full"
-      : "flex flex-col gap-4 h-full";
+  const layoutClass = isSplit
+    ? "flex flex-col md:flex-row h-full"
+    : "flex flex-col h-full";
+
+  // The divider lives on the preview pane and only appears in split view, so a
+  // single visible pane never shows a stray edge line.
+  const previewDivider = isSplit
+    ? " border-t border-[color:var(--border)] md:border-t-0 md:border-l"
+    : "";
 
   return (
     <div className={layoutClass}>
       <section
-        className={`${islandCard}${editorHidden ? " hidden" : ""}`}
+        className={`${pane}${editorHidden ? " hidden" : ""}`}
         aria-label="Editor"
       >
-        <div className={editorHeader}>
-          <span className={islandLabelInline}>Editor</span>
+        <div className={paneHeader}>
+          <span className={paneLabel}>Editor</span>
           <FormatToolbar
             onFormat={onFormat}
             modKey={modKey}
             activeFormats={activeFormats}
           />
         </div>
-        <div className="flex-1 min-h-0 px-4 pb-4">
+        <div className="flex-1 min-h-0 px-4 py-2">
           <Editor
             ref={editorRef}
             value={text}
@@ -76,8 +79,10 @@ export default function Workspace({
         </div>
       </section>
       {previewMounted && (
-        <section className={islandCard} aria-label="Preview">
-          <div className={islandLabel}>Preview</div>
+        <section className={`${pane}${previewDivider}`} aria-label="Preview">
+          <div className={paneHeader}>
+            <span className={paneLabel}>Preview</span>
+          </div>
           <div className="flex-1 min-h-0">
             <Preview ref={previewRef} markdown={text} />
           </div>

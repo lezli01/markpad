@@ -1,9 +1,15 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { EditorState, StateEffect } from "@codemirror/state";
 import Workspace from "./components/Workspace";
 import Toolbar from "./components/Toolbar";
 import ErrorBanner from "./components/ErrorBanner";
-import TabStrip from "./components/TabStrip";
+import RecentsPanel, { type RecentEntry } from "./components/RecentsPanel";
 import ConfirmDialog from "./components/ConfirmDialog";
 import type { EditorHandle } from "./components/Editor";
 import type { PreviewHandle } from "./components/Preview";
@@ -15,59 +21,116 @@ import {
   setWindowTitle,
 } from "./lib/fileOpen";
 import { getPendingFiles, subscribeToOpenFiles } from "./lib/launchFiles";
-import {
-  loadSession,
-  saveSession,
-  type SessionTabEntry,
-} from "./lib/session";
+import { loadSession, saveSession, type SessionItem } from "./lib/session";
 import {
   getAutoSave,
+  getSidebarCollapsed,
+  getSidebarWidth,
   getTheme,
   getViewMode,
   setAutoSave as persistAutoSave,
+  setSidebarCollapsed as persistSidebarCollapsed,
+  setSidebarWidth as persistSidebarWidth,
   setTheme as persistTheme,
   setViewMode as persistViewMode,
+  SIDEBAR_MAX_WIDTH,
+  SIDEBAR_MIN_WIDTH,
   type Theme,
   type ViewMode,
 } from "./lib/preferences";
 
-export type TabId = string;
-export type Tab = {
-  id: TabId;
+export type ItemId = string;
+
+/**
+ * A recents entry. Files on disk are reloaded lazily (buffer released when they
+ * go inactive and clean); untitled drafts and any modified item keep their live
+ * buffer in memory. `text`/`savedText` are only meaningful while `loaded`.
+ */
+export type RecentItem = {
+  id: ItemId;
+  kind: "file" | "untitled";
+  path: string | null;
+  name: string;
+  loaded: boolean;
   text: string;
   savedText: string;
-  openedFile: { name: string; path: string } | null;
-  untitledLabel: string | null;
+  lastActive: number;
 };
 
-type TabSnapshot = {
+type ItemSnapshot = {
   state: EditorState;
   scrollSnapshot: StateEffect<unknown>;
   previewScrollTop: number;
 };
 
+const MAX_ITEMS = 50;
 const AUTO_SAVE_DEBOUNCE_MS = 1500;
+const SESSION_DEBOUNCE_MS = 400;
 
-const appShell =
-  "h-screen w-screen flex flex-col gap-4 p-4 md:p-6 bg-gradient-to-br from-[color:var(--islands-bg-from)] to-[color:var(--islands-bg-to)]";
+// An item shows in the top "modified" tier (and keeps its buffer) when it's an
+// untitled draft, or a file with unsaved edits.
+function isModified(item: RecentItem): boolean {
+  return item.kind === "untitled" || item.text !== item.savedText;
+}
 
-const emptyStateCard =
-  "h-full flex items-center justify-center rounded-2xl bg-[color:var(--islands-surface)] ring-1 ring-[color:var(--islands-ring)] shadow-sm backdrop-blur";
+// Whether removing the item would discard actual unsaved content (drives the
+// confirm prompt). An empty untitled has nothing to lose.
+function hasUnsavedWork(item: RecentItem): boolean {
+  return item.text !== item.savedText;
+}
+
+// Display order: modified items on top, then clean items; MRU within each tier.
+function sortItems(items: RecentItem[]): RecentItem[] {
+  return [...items].sort((a, b) => {
+    const am = isModified(a) ? 1 : 0;
+    const bm = isModified(b) ? 1 : 0;
+    if (am !== bm) return bm - am;
+    return b.lastActive - a.lastActive;
+  });
+}
+
+function basename(path: string): string {
+  const normalized = path.replace(/\\/g, "/");
+  const idx = normalized.lastIndexOf("/");
+  return idx >= 0 ? normalized.slice(idx + 1) : normalized;
+}
+
+function clampWidth(px: number): number {
+  return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, px));
+}
+
+const nextItemId = (() => {
+  let n = 0;
+  return (): ItemId => `item-${++n}`;
+})();
+
+function makeUntitledLabel(existing: RecentItem[]): string {
+  let max = 0;
+  for (const t of existing) {
+    if (t.kind !== "untitled") continue;
+    const m = /^Untitled-(\d+)$/.exec(t.name);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (n > max) max = n;
+    }
+  }
+  return `Untitled-${max + 1}`;
+}
 
 const kbdClass =
-  "inline-flex items-center justify-center min-w-[2.25rem] px-2 py-0.5 text-xs font-medium rounded-md ring-1 ring-[color:var(--islands-ring)] bg-[color:var(--islands-ring)]/30 text-[color:var(--islands-text)] font-mono";
+  "inline-flex items-center justify-center min-w-[2.25rem] px-2 py-0.5 text-xs font-medium rounded border border-[color:var(--border)] bg-[color:var(--panel)] text-[color:var(--text)] font-mono";
 
 function EmptyState({ modKey }: { modKey: string }) {
   return (
-    <div className={emptyStateCard}>
+    <div className="h-full flex items-center justify-center bg-[color:var(--bg)]">
       <div className="text-center max-w-sm px-6">
-        <h2 className="text-lg font-semibold text-[color:var(--islands-text)] mb-2">
+        <h2 className="text-lg font-semibold text-[color:var(--text)] mb-2">
           No file open
         </h2>
-        <p className="text-sm text-[color:var(--islands-muted)] mb-6">
+        <p className="text-sm text-[color:var(--muted)] mb-6">
           Open an existing markdown file or create a new one to start editing.
         </p>
-        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 items-center text-sm text-[color:var(--islands-text)] text-left">
+        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 items-center text-sm text-[color:var(--text)] text-left">
           <kbd className={kbdClass}>{modKey}+N</kbd>
           <span>New file</span>
           <kbd className={kbdClass}>{modKey}+O</kbd>
@@ -80,69 +143,86 @@ function EmptyState({ modKey }: { modKey: string }) {
   );
 }
 
-const nextTabId = (() => {
-  let n = 0;
-  return (): TabId => `tab-${++n}`;
-})();
-
-function makeUntitledLabel(existing: Tab[]): string {
-  let max = 0;
-  for (const t of existing) {
-    if (t.openedFile !== null) continue;
-    if (t.untitledLabel === null) continue;
-    const m = /^Untitled-(\d+)$/.exec(t.untitledLabel);
-    if (m) {
-      const n = parseInt(m[1], 10);
-      if (n > max) max = n;
-    }
-  }
-  return `Untitled-${max + 1}`;
-}
-
 function App() {
-  const [tabs, setTabs] = useState<Tab[]>([]);
-  const [activeTabId, setActiveTabId] = useState<TabId | null>(null);
-  const [savingByTab, setSavingByTab] = useState<Record<TabId, boolean>>({});
-  const [pendingClose, setPendingClose] = useState<TabId | null>(null);
+  const [items, setItems] = useState<RecentItem[]>([]);
+  const [activeId, setActiveId] = useState<ItemId | null>(null);
+  const [savingById, setSavingById] = useState<Record<ItemId, boolean>>({});
+  const [pendingRemove, setPendingRemove] = useState<ItemId | null>(null);
 
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>(() => getViewMode());
   const [theme, setThemeState] = useState<Theme>(() => getTheme());
   const [autoSave, setAutoSaveState] = useState<boolean>(() => getAutoSave());
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() =>
+    getSidebarWidth(),
+  );
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() =>
+    getSidebarCollapsed(),
+  );
 
-  const editorStatesRef = useRef<Map<TabId, TabSnapshot>>(new Map());
+  const editorStatesRef = useRef<Map<ItemId, ItemSnapshot>>(new Map());
   const editorRef = useRef<EditorHandle>(null);
   const previewRef = useRef<PreviewHandle>(null);
-  const pendingSaveRef = useRef<Map<TabId, boolean>>(new Map());
-  const tabsRef = useRef<Tab[]>([]);
+  const pendingSaveRef = useRef<Map<ItemId, boolean>>(new Map());
+  const itemsRef = useRef<RecentItem[]>([]);
+  const activeIdRef = useRef<ItemId | null>(null);
+  const sidebarWidthRef = useRef<number>(sidebarWidth);
+  const activationSeqRef = useRef(0);
+  const activeCounterRef = useRef(1);
 
   useEffect(() => {
-    tabsRef.current = tabs;
-  }, [tabs]);
+    itemsRef.current = items;
+  }, [items]);
+  useEffect(() => {
+    activeIdRef.current = activeId;
+  }, [activeId]);
+  useEffect(() => {
+    sidebarWidthRef.current = sidebarWidth;
+  }, [sidebarWidth]);
 
-  const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
-  const activeText = activeTab?.text ?? "";
+  const activeItem = items.find((t) => t.id === activeId) ?? null;
+  const activeText = activeItem?.text ?? "";
   const activeSaving =
-    activeTab !== null && (savingByTab[activeTab.id] ?? false);
-  const saveEnabled = activeTab !== null && !activeSaving;
+    activeItem !== null && (savingById[activeItem.id] ?? false);
+  const saveEnabled = activeItem !== null && !activeSaving;
 
-  function updateTab(id: TabId, patch: (t: Tab) => Tab) {
-    setTabs((prev) => prev.map((t) => (t.id === id ? patch(t) : t)));
+  const recentEntries = useMemo<RecentEntry[]>(
+    () =>
+      sortItems(items).map((t) => ({
+        id: t.id,
+        name: t.name,
+        path: t.path,
+        modified: isModified(t),
+      })),
+    [items],
+  );
+
+  function nextActive(): number {
+    return activeCounterRef.current++;
   }
 
-  function updateActiveTabText(next: string) {
-    if (activeTabId === null) return;
-    updateTab(activeTabId, (t) => ({ ...t, text: next }));
+  function bumpActive(id: ItemId) {
+    const stamp = nextActive();
+    setItems((list) =>
+      list.map((t) => (t.id === id ? { ...t, lastActive: stamp } : t)),
+    );
   }
 
-  function activateTab(nextId: TabId | null) {
-    if (
-      activeTabId !== null &&
-      editorRef.current &&
-      activeTabId !== nextId
-    ) {
-      const previous = editorStatesRef.current.get(activeTabId);
-      editorStatesRef.current.set(activeTabId, {
+  // Capture the outgoing item's editor state, and release its buffer when it's a
+  // clean file (reloadable from disk). Modified/untitled items keep their buffer.
+  function detachActive() {
+    // Any switch invalidates an in-flight disk read: bumping the sequence here
+    // (not only inside loadItemFromDisk) ensures a load started for a now-released
+    // clean file can't resurrect its buffer after we've moved to another item.
+    activationSeqRef.current++;
+    const prevId = activeIdRef.current;
+    if (prevId === null) return;
+    const prev = itemsRef.current.find((t) => t.id === prevId);
+    const willRelease =
+      prev != null && prev.kind === "file" && prev.text === prev.savedText;
+    if (!willRelease && editorRef.current) {
+      const previous = editorStatesRef.current.get(prevId);
+      editorStatesRef.current.set(prevId, {
         state: editorRef.current.getState(),
         scrollSnapshot: editorRef.current.getScrollSnapshot(),
         previewScrollTop:
@@ -151,12 +231,64 @@ function App() {
           0,
       });
     }
-    setActiveTabId(nextId);
+    if (willRelease) {
+      editorStatesRef.current.delete(prevId);
+      setItems((list) =>
+        list.map((t) =>
+          t.id === prevId
+            ? { ...t, loaded: false, text: "", savedText: "" }
+            : t,
+        ),
+      );
+    }
+  }
+
+  async function loadItemFromDisk(id: ItemId): Promise<void> {
+    const item = itemsRef.current.find((t) => t.id === id);
+    if (!item || item.kind !== "file" || !item.path) return;
+    const seq = ++activationSeqRef.current;
+    const result = await openMarkdownFileByPath(item.path);
+    if (seq !== activationSeqRef.current) return;
+    if (result.kind === "ok") {
+      setItems((list) =>
+        list.map((t) =>
+          t.id === id
+            ? {
+                ...t,
+                loaded: true,
+                text: result.content,
+                savedText: result.content,
+                name: result.name,
+              }
+            : t,
+        ),
+      );
+    } else {
+      setError(
+        result.kind === "error"
+          ? result.message
+          : "This file could not be opened.",
+      );
+      removeItemImmediate(id);
+    }
+  }
+
+  async function activateItem(id: ItemId): Promise<void> {
+    if (activeIdRef.current === id) return;
+    detachActive();
+    const target = itemsRef.current.find((t) => t.id === id);
+    if (!target) return;
+    setActiveId(id);
+    activeIdRef.current = id;
+    bumpActive(id);
+    if (target.kind === "file" && !target.loaded) {
+      await loadItemFromDisk(id);
+    }
   }
 
   useLayoutEffect(() => {
-    if (activeTabId === null) return;
-    const snapshot = editorStatesRef.current.get(activeTabId);
+    if (activeId === null) return;
+    const snapshot = editorStatesRef.current.get(activeId);
     if (snapshot) {
       if (editorRef.current) {
         editorRef.current.setState(snapshot.state);
@@ -166,15 +298,27 @@ function App() {
     } else {
       previewRef.current?.setScrollTop(0);
     }
-  }, [activeTabId]);
+  }, [activeId]);
 
+  // Prune per-item bookkeeping for items no longer in the list.
+  useEffect(() => {
+    const ids = new Set(items.map((t) => t.id));
+    for (const key of Array.from(editorStatesRef.current.keys())) {
+      if (!ids.has(key)) editorStatesRef.current.delete(key);
+    }
+    for (const key of Array.from(pendingSaveRef.current.keys())) {
+      if (!ids.has(key)) pendingSaveRef.current.delete(key);
+    }
+  }, [items]);
+
+  // --- Mount: subscribe to OS file routing, restore the session, drain pending. ---
   useEffect(() => {
     let cancelled = false;
     let unlisten: (() => void) | null = null;
 
     (async () => {
       unlisten = await subscribeToOpenFiles((paths) => {
-        void openPathsAsTabs(paths, { source: "live" });
+        void openPaths(paths);
       });
       if (cancelled) {
         unlisten();
@@ -183,63 +327,82 @@ function App() {
 
       const session = await loadSession();
       if (cancelled) return;
-      const restored: Array<Tab | null> = [];
-      for (const entry of session.tabs) {
-        const result = await openMarkdownFileByPath(entry.path);
-        if (cancelled) return;
-        if (result.kind === "ok") {
-          restored.push({
-            id: nextTabId(),
-            text: result.content,
-            savedText: result.content,
-            openedFile: { name: result.name, path: result.path },
-            untitledLabel: null,
-          });
-        } else {
-          restored.push(null);
-        }
-      }
-      const survivingTabs = restored.filter(
-        (t): t is Tab => t !== null,
-      );
-      setTabs(survivingTabs);
 
-      let initialActiveId: TabId | null = null;
-      const savedIdx = session.active_index;
-      if (savedIdx !== null && savedIdx >= 0 && savedIdx < restored.length) {
-        const at = restored[savedIdx];
-        if (at !== null) {
-          initialActiveId = at.id;
-        }
-      }
-      if (initialActiveId === null && savedIdx !== null) {
-        for (let i = savedIdx + 1; i < restored.length; i++) {
-          const t = restored[i];
-          if (t !== null) {
-            initialActiveId = t.id;
-            break;
+      const count = session.items.length;
+      const restored: RecentItem[] = session.items
+        .map((s, i): RecentItem => {
+          const stamp = count - i;
+          if (s.kind === "untitled") {
+            const text = s.text ?? "";
+            const savedText = s.saved_text ?? "";
+            return {
+              id: nextItemId(),
+              kind: "untitled",
+              path: null,
+              name: s.name || "Untitled-1",
+              loaded: true,
+              text,
+              savedText,
+              lastActive: stamp,
+            };
           }
-        }
-        if (initialActiveId === null) {
-          for (let i = Math.min(savedIdx - 1, restored.length - 1); i >= 0; i--) {
-            const t = restored[i];
-            if (t !== null) {
-              initialActiveId = t.id;
-              break;
-            }
+          const path = s.path ?? "";
+          const name = s.name || basename(path);
+          if (s.dirty && s.text != null) {
+            return {
+              id: nextItemId(),
+              kind: "file",
+              path,
+              name,
+              loaded: true,
+              text: s.text,
+              savedText: s.saved_text ?? "",
+              lastActive: stamp,
+            };
           }
+          return {
+            id: nextItemId(),
+            kind: "file",
+            path,
+            name,
+            loaded: false,
+            text: "",
+            savedText: "",
+            lastActive: stamp,
+          };
+        })
+        .filter((t) => t.kind === "untitled" || (t.path?.length ?? 0) > 0);
+
+      activeCounterRef.current = count + 1;
+
+      let initialActiveId: ItemId | null = null;
+      const idx = session.active_index;
+      if (idx !== null && idx >= 0 && idx < restored.length) {
+        initialActiveId = restored[idx].id;
+      }
+      if (initialActiveId === null && restored.length > 0) {
+        initialActiveId = restored[0].id;
+      }
+
+      // Enforce the 50-item cap on restore as well (e.g. a migrated v1 session
+      // carrying more tabs), protecting the active item and any modified drafts.
+      const capped = capList(restored, initialActiveId ?? "", initialActiveId);
+      setItems(capped);
+      itemsRef.current = capped;
+      setActiveId(initialActiveId);
+      activeIdRef.current = initialActiveId;
+
+      if (initialActiveId !== null) {
+        const act = capped.find((t) => t.id === initialActiveId);
+        if (act && act.kind === "file" && !act.loaded) {
+          await loadItemFromDisk(initialActiveId);
         }
       }
-      if (initialActiveId === null && survivingTabs.length > 0) {
-        initialActiveId = survivingTabs[0].id;
-      }
-      setActiveTabId(initialActiveId);
-      tabsRef.current = survivingTabs;
 
       const pending = await getPendingFiles();
       if (cancelled) return;
       if (pending.length > 0) {
-        await openPathsAsTabs(pending, { source: "pending" });
+        await openPaths(pending);
       }
     })();
 
@@ -251,87 +414,144 @@ function App() {
   }, []);
 
   useEffect(() => {
-    setWindowTitle(activeTab?.openedFile?.name ?? null);
-  }, [activeTabId, activeTab?.openedFile?.name]);
+    setWindowTitle(activeItem?.name ?? null);
+  }, [activeId, activeItem?.name]);
 
-  const tabPathsKey = useMemo(
-    () => tabs.map((t) => t.openedFile?.path ?? "").join("|"),
-    [tabs],
-  );
-
+  // --- Persist the recents list (+ drafts) on any change. ---
   useEffect(() => {
-    const id = setTimeout(() => {
-      const savedTabs: SessionTabEntry[] = tabs
-        .filter((t) => t.openedFile !== null)
-        .map((t) => ({ path: t.openedFile!.path }));
-      let activeIdx: number | null = null;
-      if (activeTab?.openedFile) {
-        const idx = savedTabs.findIndex(
-          (s) => s.path === activeTab.openedFile!.path,
-        );
-        activeIdx = idx >= 0 ? idx : null;
+    const handle = setTimeout(() => {
+      const displayed = sortItems(itemsRef.current);
+      const sessionItems: SessionItem[] = displayed.map((t) => {
+        if (t.kind === "untitled") {
+          return {
+            kind: "untitled",
+            path: null,
+            name: t.name,
+            dirty: t.text !== t.savedText,
+            text: t.text,
+            saved_text: t.savedText,
+          };
+        }
+        if (isModified(t)) {
+          return {
+            kind: "file",
+            path: t.path,
+            name: t.name,
+            dirty: true,
+            text: t.text,
+            saved_text: t.savedText,
+          };
+        }
+        return {
+          kind: "file",
+          path: t.path,
+          name: t.name,
+          dirty: false,
+          text: null,
+          saved_text: null,
+        };
+      });
+      let activeIndex: number | null = null;
+      const aId = activeIdRef.current;
+      if (aId !== null) {
+        const i = displayed.findIndex((t) => t.id === aId);
+        activeIndex = i >= 0 ? i : null;
       }
       void saveSession({
-        version: 1,
-        tabs: savedTabs,
-        active_index: activeIdx,
+        version: 2,
+        items: sessionItems,
+        active_index: activeIndex,
       });
-    }, 300);
-    return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tabPathsKey, activeTabId]);
+    }, SESSION_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [items, activeId]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
 
+  // --- Auto-save (files with a path only; never auto-Save-As an untitled draft). ---
   useEffect(() => {
     if (!autoSave) return;
-    if (activeTab === null) return;
-    if (activeTab.openedFile === null) return;
-    if (activeTab.text === activeTab.savedText) return;
-    if (savingByTab[activeTab.id]) return;
-    const tabId = activeTab.id;
-    const id = setTimeout(() => {
-      void performSave(tabId);
+    if (activeItem === null) return;
+    if (activeItem.kind !== "file" || !activeItem.path) return;
+    if (activeItem.text === activeItem.savedText) return;
+    if (savingById[activeItem.id]) return;
+    const id = activeItem.id;
+    const handle = setTimeout(() => {
+      void performSave(id);
     }, AUTO_SAVE_DEBOUNCE_MS);
-    return () => clearTimeout(id);
-    // performSave reads latest state via closure; intentionally not in deps.
+    return () => clearTimeout(handle);
+    // performSave reads latest state via refs; intentionally not in deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTabId, tabs, autoSave, savingByTab]);
+  }, [activeId, items, autoSave, savingById]);
+
+  function updateActiveItemText(next: string) {
+    const id = activeIdRef.current;
+    if (id === null) return;
+    const cur = itemsRef.current.find((t) => t.id === id);
+    setItems((list) =>
+      list.map((t) => (t.id === id ? { ...t, text: next } : t)),
+    );
+    // Clean file just became dirty → promote it to the top of the modified tier.
+    if (
+      cur &&
+      cur.kind === "file" &&
+      cur.text === cur.savedText &&
+      next !== cur.savedText
+    ) {
+      bumpActive(id);
+    }
+  }
 
   function handleNewFile() {
-    const label = makeUntitledLabel(tabs);
-    const newTab: Tab = {
-      id: nextTabId(),
+    detachActive();
+    const label = makeUntitledLabel(itemsRef.current);
+    const stamp = nextActive();
+    const id = nextItemId();
+    const newItem: RecentItem = {
+      id,
+      kind: "untitled",
+      path: null,
+      name: label,
+      loaded: true,
       text: "",
       savedText: "",
-      openedFile: null,
-      untitledLabel: label,
+      lastActive: stamp,
     };
-    setTabs((prev) => [...prev, newTab]);
-    activateTab(newTab.id);
+    const prevActive = activeIdRef.current;
+    setItems((prev) => capList([...prev, newItem], id, prevActive));
+    setActiveId(id);
+    activeIdRef.current = id;
     setError(null);
   }
 
   async function handleOpenFile() {
     const result = await openMarkdownFile();
     if (result.kind === "ok") {
-      const existing = tabs.find((t) => t.openedFile?.path === result.path);
+      const existing = itemsRef.current.find((t) => t.path === result.path);
       if (existing) {
-        activateTab(existing.id);
+        await activateItem(existing.id);
         setError(null);
         return;
       }
-      const newTab: Tab = {
-        id: nextTabId(),
+      detachActive();
+      const stamp = nextActive();
+      const id = nextItemId();
+      const newItem: RecentItem = {
+        id,
+        kind: "file",
+        path: result.path,
+        name: result.name,
+        loaded: true,
         text: result.content,
         savedText: result.content,
-        openedFile: { name: result.name, path: result.path },
-        untitledLabel: null,
+        lastActive: stamp,
       };
-      setTabs((prev) => [...prev, newTab]);
-      activateTab(newTab.id);
+      const prevActive = activeIdRef.current;
+      setItems((prev) => capList([...prev, newItem], id, prevActive));
+      setActiveId(id);
+      activeIdRef.current = id;
       setError(null);
     } else if (result.kind === "error") {
       setError(result.message);
@@ -339,84 +559,111 @@ function App() {
     // kind === "cancelled": no-op
   }
 
-  async function openPathsAsTabs(
-    paths: string[],
-    options: { source: "session" | "pending" | "live" },
-  ): Promise<void> {
-    let lastOpenedId: TabId | null = null;
+  // Add file references for OS-routed paths (pending/live). References are loaded
+  // lazily; only the finally-activated item is read from disk here, so any read
+  // error surfaces via loadItemFromDisk when that item becomes active.
+  async function openPaths(paths: string[]): Promise<void> {
+    let lastId: ItemId | null = null;
     for (const path of paths) {
-      const existing = tabsRef.current.find(
-        (t) => t.openedFile?.path === path,
-      );
+      const existing = itemsRef.current.find((t) => t.path === path);
       if (existing) {
-        lastOpenedId = existing.id;
+        lastId = existing.id;
         continue;
       }
-      const result = await openMarkdownFileByPath(path);
-      if (result.kind === "ok") {
-        const newTab: Tab = {
-          id: nextTabId(),
-          text: result.content,
-          savedText: result.content,
-          openedFile: { name: result.name, path: result.path },
-          untitledLabel: null,
-        };
-        setTabs((prev) => [...prev, newTab]);
-        lastOpenedId = newTab.id;
-      } else if (result.kind === "error" && options.source === "live") {
-        setError(result.message);
-      }
+      const stamp = nextActive();
+      const id = nextItemId();
+      const newItem: RecentItem = {
+        id,
+        kind: "file",
+        path,
+        name: basename(path),
+        loaded: false,
+        text: "",
+        savedText: "",
+        lastActive: stamp,
+      };
+      const prevActive = activeIdRef.current;
+      const next = capList([...itemsRef.current, newItem], id, prevActive);
+      itemsRef.current = next;
+      setItems(next);
+      lastId = id;
     }
-    if (lastOpenedId !== null) {
-      activateTab(lastOpenedId);
+    if (lastId !== null) {
+      await activateItem(lastId);
     }
   }
 
-  async function performSave(
-    tabId: TabId | null = activeTabId,
-  ): Promise<boolean> {
-    if (tabId === null) return false;
-    if (savingByTab[tabId]) {
-      pendingSaveRef.current.set(tabId, true);
+  // Evict the least-recently-used clean files when over the cap. Modified items,
+  // the freshly added item, and the active item are protected.
+  function capList(
+    list: RecentItem[],
+    keepId: ItemId,
+    activeItemId: ItemId | null,
+  ): RecentItem[] {
+    if (list.length <= MAX_ITEMS) return list;
+    const removable = list
+      .filter(
+        (t) =>
+          t.id !== keepId && t.id !== activeItemId && !isModified(t),
+      )
+      .sort((a, b) => a.lastActive - b.lastActive);
+    const need = list.length - MAX_ITEMS;
+    const removeIds = new Set(removable.slice(0, need).map((t) => t.id));
+    if (removeIds.size === 0) return list;
+    return list.filter((t) => !removeIds.has(t.id));
+  }
+
+  async function performSave(id: ItemId | null = activeId): Promise<boolean> {
+    if (id === null) return false;
+    if (savingById[id]) {
+      pendingSaveRef.current.set(id, true);
       return false;
     }
-    const tab = tabs.find((t) => t.id === tabId);
-    if (!tab) return false;
-    setSavingByTab((prev) => ({ ...prev, [tabId]: true }));
-    const outbound = tab.text;
-    const displayName =
-      tab.openedFile?.name ?? tab.untitledLabel ?? "Untitled";
+    const item = itemsRef.current.find((t) => t.id === id);
+    if (!item) return false;
+    setSavingById((prev) => ({ ...prev, [id]: true }));
+    const outbound = item.text;
+    const displayName = item.name;
     let success = false;
-    if (tab.openedFile === null) {
-      const result = await saveMarkdownFileAs(outbound, "Untitled.md");
+    if (item.kind === "untitled") {
+      const result = await saveMarkdownFileAs(outbound, `${item.name}.md`);
       if (result.kind === "ok") {
-        updateTab(tabId, (t) => ({
-          ...t,
-          savedText: outbound,
-          openedFile: { name: result.name, path: result.path },
-          untitledLabel: null,
-        }));
+        setItems((list) =>
+          list.map((t) =>
+            t.id === id
+              ? {
+                  ...t,
+                  kind: "file",
+                  path: result.path,
+                  name: result.name,
+                  savedText: outbound,
+                }
+              : t,
+          ),
+        );
         setError(null);
         success = true;
       } else if (result.kind === "error") {
         setError(`Could not save ${displayName}: ${result.message}`);
       }
       // cancelled: no-op
-    } else {
-      const result = await saveMarkdownFile(tab.openedFile.path, outbound);
+    } else if (item.path) {
+      const result = await saveMarkdownFile(item.path, outbound);
       if (result.kind === "ok") {
-        updateTab(tabId, (t) => ({ ...t, savedText: outbound }));
+        setItems((list) =>
+          list.map((t) => (t.id === id ? { ...t, savedText: outbound } : t)),
+        );
         setError(null);
         success = true;
       } else {
         setError(`Could not save ${displayName}: ${result.message}`);
       }
     }
-    setSavingByTab((prev) => ({ ...prev, [tabId]: false }));
-    if (pendingSaveRef.current.get(tabId)) {
-      pendingSaveRef.current.set(tabId, false);
+    setSavingById((prev) => ({ ...prev, [id]: false }));
+    if (pendingSaveRef.current.get(id)) {
+      pendingSaveRef.current.set(id, false);
       queueMicrotask(() => {
-        void performSave(tabId);
+        void performSave(id);
       });
     }
     return success;
@@ -426,57 +673,63 @@ function App() {
     void performSave();
   }
 
-  function removeTab(id: TabId) {
-    const idx = tabs.findIndex((t) => t.id === id);
-    if (idx < 0) return;
-    const wasActive = activeTabId === id;
-    const next = tabs.filter((t) => t.id !== id);
-    setTabs(next);
+  function removeItemImmediate(id: ItemId) {
+    const wasActive = activeIdRef.current === id;
+    const displayed = sortItems(itemsRef.current);
+    const idx = displayed.findIndex((t) => t.id === id);
+    const next = itemsRef.current.filter((t) => t.id !== id);
     editorStatesRef.current.delete(id);
     pendingSaveRef.current.delete(id);
-    setSavingByTab((prev) => {
+    itemsRef.current = next;
+    setItems(next);
+    setSavingById((prev) => {
       const out = { ...prev };
       delete out[id];
       return out;
     });
     if (wasActive) {
-      const neighbor = next[idx] ?? next[idx - 1] ?? null;
-      setActiveTabId(neighbor?.id ?? null);
+      const neighbor =
+        displayed[idx + 1] ?? displayed[idx - 1] ?? null;
+      const neighborId = neighbor?.id ?? null;
+      setActiveId(neighborId);
+      activeIdRef.current = neighborId;
+      if (neighbor && neighbor.kind === "file" && !neighbor.loaded) {
+        void loadItemFromDisk(neighbor.id);
+      }
     }
-    setPendingClose((prev) => (prev === id ? null : prev));
+    setPendingRemove((prev) => (prev === id ? null : prev));
   }
 
-  function handleCloseTab(id: TabId) {
-    const tab = tabs.find((t) => t.id === id);
-    if (!tab) return;
-    const isModifiedTab = tab.text !== tab.savedText;
-    if (!isModifiedTab) {
-      removeTab(id);
+  function handleRemove(id: ItemId) {
+    const item = itemsRef.current.find((t) => t.id === id);
+    if (!item) return;
+    if (hasUnsavedWork(item)) {
+      setPendingRemove(id);
       return;
     }
-    setPendingClose(id);
+    removeItemImmediate(id);
   }
 
   async function handleConfirmSave() {
-    if (pendingClose === null) return;
-    const id = pendingClose;
+    if (pendingRemove === null) return;
+    const id = pendingRemove;
     const ok = await performSave(id);
     if (!ok) {
-      setPendingClose(null);
+      setPendingRemove(null);
       return;
     }
-    removeTab(id);
-    setPendingClose(null);
+    removeItemImmediate(id);
+    setPendingRemove(null);
   }
 
   function handleConfirmDiscard() {
-    if (pendingClose === null) return;
-    removeTab(pendingClose);
-    setPendingClose(null);
+    if (pendingRemove === null) return;
+    removeItemImmediate(pendingRemove);
+    setPendingRemove(null);
   }
 
   function handleConfirmCancel() {
-    setPendingClose(null);
+    setPendingRemove(null);
   }
 
   function handleSetViewMode(mode: ViewMode) {
@@ -495,14 +748,42 @@ function App() {
     persistAutoSave(next);
   }
 
+  function handleToggleSidebar() {
+    setSidebarCollapsed((c) => {
+      const next = !c;
+      persistSidebarCollapsed(next);
+      return next;
+    });
+  }
+
+  function startResize(e: React.PointerEvent) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = sidebarWidthRef.current;
+    document.body.style.userSelect = "none";
+    function onMove(ev: PointerEvent) {
+      setSidebarWidth(clampWidth(startWidth + (ev.clientX - startX)));
+    }
+    function onUp() {
+      document.body.style.userSelect = "";
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      persistSidebarWidth(sidebarWidthRef.current);
+    }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
+
   const handleSaveRef = useRef(handleSave);
   const handleNewFileRef = useRef(handleNewFile);
   const handleOpenFileRef = useRef(handleOpenFile);
+  const handleToggleSidebarRef = useRef(handleToggleSidebar);
 
   useEffect(() => {
     handleSaveRef.current = handleSave;
     handleNewFileRef.current = handleNewFile;
     handleOpenFileRef.current = handleOpenFile;
+    handleToggleSidebarRef.current = handleToggleSidebar;
   });
 
   useEffect(() => {
@@ -519,17 +800,18 @@ function App() {
       } else if (key === "o") {
         e.preventDefault();
         void handleOpenFileRef.current();
+      } else if (key === "\\") {
+        e.preventDefault();
+        handleToggleSidebarRef.current();
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const pendingCloseTab = tabs.find((t) => t.id === pendingClose) ?? null;
-  const pendingCloseName =
-    pendingCloseTab?.openedFile?.name ??
-    pendingCloseTab?.untitledLabel ??
-    "Untitled";
+  const pendingRemoveItem =
+    items.find((t) => t.id === pendingRemove) ?? null;
+  const pendingRemoveName = pendingRemoveItem?.name ?? "Untitled";
 
   const isMac =
     typeof navigator !== "undefined" &&
@@ -537,48 +819,69 @@ function App() {
   const modKey = isMac ? "⌘" : "Ctrl";
 
   return (
-    <div className={appShell}>
-      <TabStrip
-        tabs={tabs}
-        activeTabId={activeTabId}
-        onActivate={activateTab}
-        onClose={handleCloseTab}
-      />
-      <Toolbar
-        viewMode={viewMode}
-        theme={theme}
-        saveEnabled={saveEnabled}
-        saving={activeSaving}
-        autoSave={autoSave}
-        onNewFile={handleNewFile}
-        onOpenFile={handleOpenFile}
-        onSave={handleSave}
-        onToggleAutoSave={handleToggleAutoSave}
-        onSetViewMode={handleSetViewMode}
-        onToggleTheme={handleToggleTheme}
-      />
-      {error !== null && (
-        <ErrorBanner message={error} onDismiss={() => setError(null)} />
-      )}
-      <div className="flex-1 min-h-0">
-        {tabs.length === 0 ? (
-          <EmptyState modKey={modKey} />
-        ) : (
-          <Workspace
-            text={activeText}
-            viewMode={viewMode}
-            onTextChange={updateActiveTabText}
-            onFormat={(id) => editorRef.current?.format(id)}
-            modKey={modKey}
-            editorRef={editorRef}
-            previewRef={previewRef}
+    <div className="h-screen w-screen flex overflow-hidden bg-[color:var(--bg)] text-[color:var(--text)]">
+      {!sidebarCollapsed && (
+        <>
+          <aside
+            style={{ width: sidebarWidth }}
+            className="shrink-0 h-full overflow-hidden border-r border-[color:var(--border)] bg-[color:var(--panel)]"
+          >
+            <RecentsPanel
+              items={recentEntries}
+              activeId={activeId}
+              onActivate={(id) => void activateItem(id)}
+              onRemove={handleRemove}
+            />
+          </aside>
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize recent files panel"
+            onPointerDown={startResize}
+            style={{ touchAction: "none" }}
+            className="w-1 shrink-0 cursor-col-resize bg-transparent hover:bg-[color:var(--accent)]/40 transition-colors"
           />
+        </>
+      )}
+      <div className="flex-1 min-w-0 h-full flex flex-col">
+        <Toolbar
+          viewMode={viewMode}
+          theme={theme}
+          saveEnabled={saveEnabled}
+          saving={activeSaving}
+          autoSave={autoSave}
+          sidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={handleToggleSidebar}
+          onNewFile={handleNewFile}
+          onOpenFile={handleOpenFile}
+          onSave={handleSave}
+          onToggleAutoSave={handleToggleAutoSave}
+          onSetViewMode={handleSetViewMode}
+          onToggleTheme={handleToggleTheme}
+        />
+        {error !== null && (
+          <ErrorBanner message={error} onDismiss={() => setError(null)} />
         )}
+        <div className="flex-1 min-h-0">
+          {activeItem === null ? (
+            <EmptyState modKey={modKey} />
+          ) : (
+            <Workspace
+              text={activeText}
+              viewMode={viewMode}
+              onTextChange={updateActiveItemText}
+              onFormat={(id) => editorRef.current?.format(id)}
+              modKey={modKey}
+              editorRef={editorRef}
+              previewRef={previewRef}
+            />
+          )}
+        </div>
       </div>
       <ConfirmDialog
-        open={pendingClose !== null}
-        title={`Save changes to ${pendingCloseName}?`}
-        message="You have unsaved changes. Save them now, discard them, or cancel and keep the tab open?"
+        open={pendingRemove !== null}
+        title={`Save changes to ${pendingRemoveName}?`}
+        message="You have unsaved changes. Save them now, discard them, or cancel and keep the item in the list?"
         onSave={() => {
           void handleConfirmSave();
         }}
