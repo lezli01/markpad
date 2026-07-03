@@ -37,6 +37,12 @@ const editorTheme = EditorView.theme({
     color: "var(--text)",
     backgroundColor: "transparent",
   },
+  // Drop CodeMirror's default dotted focus outline (the "select rectangle"
+  // around the whole editor). Focus is already obvious from the caret; the
+  // outline just clutters the flat, edge-to-edge pane.
+  "&.cm-focused": {
+    outline: "none",
+  },
   ".cm-scroller": {
     fontFamily:
       'ui-monospace, "SF Mono", Monaco, Menlo, Consolas, "Liberation Mono", monospace',

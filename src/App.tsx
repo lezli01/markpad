@@ -280,7 +280,9 @@ function App() {
     if (!target) return;
     setActiveId(id);
     activeIdRef.current = id;
-    bumpActive(id);
+    // Selecting an item must NOT reorder the list — a recent stays where it is
+    // until it's actually modified. The promotion to the top happens in
+    // updateActiveItemText, only on the first (clean → dirty) edit.
     if (target.kind === "file" && !target.loaded) {
       await loadItemFromDisk(id);
     }

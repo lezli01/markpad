@@ -20,11 +20,13 @@ type WorkspaceProps = {
 const pane =
   "flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden bg-[color:var(--bg)]";
 
+// Fixed-height header so the editor's format toolbar and the preview's label
+// line up their bottom borders exactly, regardless of which controls each holds.
 const paneHeader =
-  "flex items-center justify-between gap-2 px-4 py-2 border-b border-[color:var(--border)]";
+  "flex items-center justify-between gap-2 px-4 h-11 shrink-0 border-b border-[color:var(--border)]";
 
 const paneLabel =
-  "text-xs font-medium uppercase tracking-wide text-[color:var(--muted)] select-none";
+  "shrink-0 text-xs font-medium uppercase tracking-wide text-[color:var(--muted)] select-none";
 
 export default function Workspace({
   text,
@@ -63,11 +65,25 @@ export default function Workspace({
       >
         <div className={paneHeader}>
           <span className={paneLabel}>Editor</span>
-          <FormatToolbar
-            onFormat={onFormat}
-            modKey={modKey}
-            activeFormats={activeFormats}
-          />
+          {/* Toolbar stays a single row and scrolls sideways when the pane is
+              too narrow, so the header height (and its border) never shifts.
+              p-1 keeps each button's focus ring from being clipped by the
+              scroll container; the wheel handler lets a plain vertical mouse
+              wheel reach the toolbar while its scrollbar is hidden. */}
+          <div
+            className="min-w-0 overflow-x-auto no-scrollbar p-1"
+            onWheel={(e) => {
+              if (e.deltaY !== 0 && e.deltaX === 0) {
+                e.currentTarget.scrollLeft += e.deltaY;
+              }
+            }}
+          >
+            <FormatToolbar
+              onFormat={onFormat}
+              modKey={modKey}
+              activeFormats={activeFormats}
+            />
+          </div>
         </div>
         <div className="flex-1 min-h-0 px-4 py-2">
           <Editor

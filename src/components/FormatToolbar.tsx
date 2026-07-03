@@ -63,7 +63,7 @@ const GROUPED = GROUP_ORDER.map((id) => ({
   actions: FORMAT_ACTIONS.filter((a) => a.group === id),
 }));
 
-const toolbarShell = "flex items-center gap-0.5 flex-wrap";
+const toolbarShell = "flex items-center gap-0.5 flex-nowrap";
 const formatGroup = "inline-flex items-center gap-0.5";
 const divider = "mx-1 h-5 w-px bg-[color:var(--border)]";
 

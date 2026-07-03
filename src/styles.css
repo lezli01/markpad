@@ -71,6 +71,15 @@ body {
   background: var(--bg);
 }
 
+/* Keep the editor's format toolbar horizontally scrollable at narrow widths
+   without a visible scrollbar, so the pane header stays a single clean row. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Hand-tuned typography for the rendered markdown in <Preview />.
    markdown-it emits standard tags (h1-h6, p, ul/ol/li, a, code, pre,
    blockquote, hr, table, img); we style them via descendant selectors
