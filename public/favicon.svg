@@ -1,8 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <!--
-    markpad app icon — a rounded indigo tile with "MI" / "LF" stacked.
-    Letters are encoded as SVG paths (not <text>) so resvg/tauri-icon
-    rasterizes them without needing a system font.
+    markpad app icon — the Markdown mark (a blocky "M" beside a downward
+    arrow) in white on a rounded indigo tile. The glyphs are encoded as
+    SVG paths (not <text>) so resvg / `tauri icon` rasterizes them without
+    needing a system font. Indigo palette kept from the original brand.
   -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
@@ -14,23 +15,14 @@
   <rect width="1024" height="1024" rx="200" ry="200" fill="url(#bg)"/>
 
   <g fill="#ffffff">
-    <!-- Top row: MI -->
-    <g transform="translate(169 90) scale(1.4)">
-      <!-- M (200 wide x 280 tall) -->
-      <path d="M0,280 V0 H50 L100,130 L150,0 H200 V280 H150 V90 L115,200 H85 L50,90 V280 Z"/>
-      <!-- I with slab serifs (240 wide x 280 tall), offset by M+gap -->
-      <g transform="translate(250 0)">
-        <path d="M0,0 H240 V50 H150 V230 H240 V280 H0 V230 H90 V50 H0 Z"/>
+    <g transform="translate(254 332)">
+      <!-- M (200 x 280) scaled to 257 x 360 -->
+      <g transform="scale(1.2857)">
+        <path d="M0,280 V0 H50 L100,130 L150,0 H200 V280 H150 V90 L115,200 H85 L50,90 V280 Z"/>
       </g>
-    </g>
-
-    <!-- Bottom row: LF -->
-    <g transform="translate(197 542) scale(1.4)">
-      <!-- L (200 wide x 280 tall) -->
-      <path d="M0,0 H50 V230 H200 V280 H0 Z"/>
-      <!-- F (200 wide x 280 tall), offset by L+gap -->
-      <g transform="translate(250 0)">
-        <path d="M0,0 H200 V50 H50 V115 H160 V165 H50 V280 H0 Z"/>
+      <!-- Downward arrow (200 x 360), placed to the right of the M -->
+      <g transform="translate(317 0)">
+        <path d="M60,0 H140 V170 H200 L100,360 L0,170 H60 Z"/>
       </g>
     </g>
   </g>
