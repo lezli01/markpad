@@ -55,6 +55,7 @@ Open a `.md` file and markpad treats editing and previewing as first-class,
 side-by-side work:
 
 - **Live split-pane preview.** Edit Markdown on the left, see it rendered on the right, with each pane scrolling independently.
+- **In-document link navigation.** Headings get anchor ids, so clicking an in-page link in the preview — like a table of contents `[Section](#section)` — smooth-scrolls to that heading within the preview pane.
 - **Formatting toolbar.** One-click Markdown formatting from the editor header — bold, italic, strikethrough, inline code, headings, bullet/numbered lists, quotes, links, images, code blocks, tables, and horizontal rules — with shortcuts for the common ones (`Ctrl/⌘+B`, `+I`, `+E`, `+K`, and more). Buttons toggle the mark off when reapplied and light up to show the formatting at the cursor.
 - **Three view modes.** Editor-only, preview-only, or side-by-side — switch at any time without losing the editor's content, selection, or undo history.
 - **Recent files sidebar.** A left-hand panel lists up to 50 recently opened items — most-recent first, with modified files pinned to the top and marked. Click one to open it; modified and untitled documents keep their unsaved edits, cursor, and scroll position.
