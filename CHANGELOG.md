@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.6.0](https://github.com/lezli01/markpad/compare/v0.5.0...v0.6.0) (2026-07-03)
+
+
+### Features
+
+* redesign around a recent-files sidebar with a flat, professional look ([16d4559](https://github.com/lezli01/markpad/commit/16d45593567d6965d8245ce0a189855d6bfc055c))
+* redesign around a recent-files sidebar with a flat, professional look ([009c239](https://github.com/lezli01/markpad/commit/009c2397e71f102ae4e20092cead57edc70465f7))
+* reflect cursor formatting in toolbar and scroll preview anchors ([0bcd263](https://github.com/lezli01/markpad/commit/0bcd26304a2412180293368a15a04f64bfec7220))
+* reflect cursor formatting in toolbar and scroll preview anchors ([63bda42](https://github.com/lezli01/markpad/commit/63bda420933ce36bcf28b1e33456dac452099788))
+
+
+### Bug Fixes
+
+* polish redesign UI and flatten the app logo ([01112fd](https://github.com/lezli01/markpad/commit/01112fdf483908513cca9aa96515e89c7157afe0))
+* remove background gap between recents sidebar and top bar ([4a9aa6a](https://github.com/lezli01/markpad/commit/4a9aa6adc2b550bd88457330c000969e4b193cae))
+
 ## [0.5.0](https://github.com/lezli01/markpad/compare/v0.4.0...v0.5.0) (2026-05-29)
 
 
