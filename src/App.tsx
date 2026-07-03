@@ -824,7 +824,7 @@ function App() {
         <>
           <aside
             style={{ width: sidebarWidth }}
-            className="shrink-0 h-full overflow-hidden border-r border-[color:var(--border)] bg-[color:var(--panel)]"
+            className="shrink-0 h-full overflow-hidden bg-[color:var(--panel)]"
           >
             <RecentsPanel
               items={recentEntries}
@@ -839,7 +839,7 @@ function App() {
             aria-label="Resize recent files panel"
             onPointerDown={startResize}
             style={{ touchAction: "none" }}
-            className="w-1 shrink-0 cursor-col-resize bg-transparent hover:bg-[color:var(--accent)]/40 transition-colors"
+            className="relative w-px shrink-0 cursor-col-resize bg-[color:var(--border)] transition-colors hover:bg-[color:var(--accent)] before:absolute before:inset-y-0 before:-left-1 before:-right-1 before:content-['']"
           />
         </>
       )}
