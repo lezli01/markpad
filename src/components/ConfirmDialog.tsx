@@ -10,10 +10,13 @@ type ConfirmDialogProps = {
 };
 
 const dialogShell =
-  "m-auto rounded-2xl bg-[color:var(--islands-surface)] ring-1 ring-[color:var(--islands-ring)] shadow-lg p-6 max-w-md backdrop:bg-black/30 backdrop:backdrop-blur-sm text-[color:var(--islands-text)]";
+  "m-auto rounded-lg border border-[color:var(--border)] bg-[color:var(--panel)] shadow-xl p-6 max-w-md backdrop:bg-black/40 text-[color:var(--text)]";
 
 const buttonBase =
-  "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-[color:var(--islands-text)] ring-1 ring-[color:var(--islands-ring)] bg-transparent hover:bg-[color:var(--islands-ring)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--islands-cursor)] transition-colors";
+  "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-[color:var(--text)] border border-[color:var(--border)] bg-transparent hover:bg-[color:var(--hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] transition-colors";
+
+const buttonPrimary =
+  "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-[color:var(--accent-fg)] border border-transparent bg-[color:var(--accent)] hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] transition-opacity";
 
 export default function ConfirmDialog({
   open,
@@ -53,7 +56,7 @@ export default function ConfirmDialog({
         {message}
       </p>
       <div className="flex justify-end gap-2">
-        <button type="button" autoFocus onClick={onSave} className={buttonBase}>
+        <button type="button" autoFocus onClick={onSave} className={buttonPrimary}>
           Save
         </button>
         <button type="button" onClick={onDiscard} className={buttonBase}>

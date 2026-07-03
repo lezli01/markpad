@@ -1,32 +1,53 @@
 @import "tailwindcss";
 
 /*
-  Islands palette — shared between Tailwind utility usage and the CodeMirror
-  EditorView.theme(...) in src/components/Editor.tsx so both sides of the
-  workspace draw from the same source of truth (per research.md §3, §5).
-  Values mirror Tailwind's slate / indigo scales.
+  Refined-neutral palette — a flat, edge-to-edge professional surface (no
+  gradient, no frosted "island" cards). Shared between Tailwind utility usage
+  and the CodeMirror EditorView.theme(...) in src/components/Editor.tsx so both
+  sides of the workspace draw from the same source of truth. A single indigo
+  accent is used only for the active row and focus rings; everything else is
+  neutral zinc/slate. Light + dark are both first-class.
+
+  Token reference:
+    --bg           main editor/preview surface
+    --panel        chrome: left recents sidebar + top toolbar
+    --border       hairline dividers between regions
+    --text         primary text
+    --muted        secondary / label text
+    --hover        subtle hover wash for rows + buttons
+    --accent       single accent (indigo) — active row, focus, links, caret
+    --accent-fg    text/icon on a filled accent surface
+    --accent-soft  translucent accent wash for the active list row
+    --selection    editor text-selection background
+    --code-bg      inline code / code-block background in the preview
 */
 :root {
-  --islands-bg-from: #f8fafc; /* slate-50 */
-  --islands-bg-to: #f1f5f9; /* slate-100 */
-  --islands-surface: rgb(255 255 255 / 0.8);
-  --islands-ring: rgb(0 0 0 / 0.05);
-  --islands-text: #0f172a; /* slate-900 */
-  --islands-muted: #64748b; /* slate-500 */
-  --islands-selection: #c7d2fe; /* indigo-200 */
-  --islands-cursor: #6366f1; /* indigo-500 */
+  --bg: #ffffff;
+  --panel: #f7f8fa;
+  --border: #e6e8ec;
+  --text: #1a1d21;
+  --muted: #6b7280;
+  --hover: rgb(0 0 0 / 0.045);
+  --accent: #6366f1; /* indigo-500 */
+  --accent-fg: #ffffff;
+  --accent-soft: rgb(99 102 241 / 0.12);
+  --selection: #c7d2fe; /* indigo-200 */
+  --code-bg: #f1f2f4;
   color-scheme: light;
 }
 
 :root[data-theme="dark"] {
-  --islands-bg-from: #0f172a; /* slate-900 */
-  --islands-bg-to: #020617; /* slate-950 */
-  --islands-surface: rgb(30 41 59 / 0.6); /* slate-800 / 60% */
-  --islands-ring: rgb(255 255 255 / 0.08);
-  --islands-text: #f1f5f9; /* slate-100 */
-  --islands-muted: #94a3b8; /* slate-400 */
-  --islands-selection: rgb(99 102 241 / 0.35); /* indigo-500 / 35% */
-  --islands-cursor: #a5b4fc; /* indigo-300 */
+  --bg: #0e1013;
+  --panel: #16181d;
+  --border: #262a31;
+  --text: #e6e8eb;
+  --muted: #9098a3;
+  --hover: rgb(255 255 255 / 0.06);
+  --accent: #818cf8; /* indigo-400 */
+  --accent-fg: #0e1013;
+  --accent-soft: rgb(129 140 248 / 0.18);
+  --selection: rgb(129 140 248 / 0.3);
+  --code-bg: #1c1f26;
   color-scheme: dark;
 }
 
@@ -46,7 +67,17 @@ body {
     Helvetica,
     Arial,
     sans-serif;
-  color: var(--islands-text);
+  color: var(--text);
+  background: var(--bg);
+}
+
+/* Keep the editor's format toolbar horizontally scrollable at narrow widths
+   without a visible scrollbar, so the pane header stays a single clean row. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* Hand-tuned typography for the rendered markdown in <Preview />.
@@ -92,7 +123,7 @@ body {
 .markpad-preview h5,
 .markpad-preview h6 {
   font-size: 1rem;
-  color: var(--islands-muted);
+  color: var(--muted);
 }
 
 .markpad-preview p {
@@ -100,7 +131,7 @@ body {
 }
 
 .markpad-preview a {
-  color: var(--islands-cursor);
+  color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -134,14 +165,14 @@ body {
   font-size: 0.85em;
   padding: 0.1em 0.35em;
   border-radius: 0.25rem;
-  background: var(--islands-ring);
+  background: var(--code-bg);
 }
 
 .markpad-preview pre {
   margin: 0.75rem 0;
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
-  background: var(--islands-ring);
+  background: var(--code-bg);
   overflow-x: auto;
 }
 
@@ -154,15 +185,15 @@ body {
 .markpad-preview blockquote {
   margin: 0.75rem 0;
   padding: 0.25rem 0 0.25rem 0.75rem;
-  border-left: 3px solid var(--islands-muted);
-  color: var(--islands-muted);
+  border-left: 3px solid var(--border);
+  color: var(--muted);
   font-style: italic;
 }
 
 .markpad-preview hr {
   margin: 1.25rem 0;
   border: none;
-  border-top: 1px solid var(--islands-ring);
+  border-top: 1px solid var(--border);
 }
 
 .markpad-preview table {
@@ -173,7 +204,7 @@ body {
 
 .markpad-preview th,
 .markpad-preview td {
-  border: 1px solid var(--islands-ring);
+  border: 1px solid var(--border);
   padding: 0.4rem 0.6rem;
   text-align: left;
 }

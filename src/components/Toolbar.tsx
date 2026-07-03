@@ -6,6 +6,8 @@ type ToolbarProps = {
   saveEnabled: boolean;
   saving: boolean;
   autoSave: boolean;
+  sidebarCollapsed: boolean;
+  onToggleSidebar: () => void;
   onNewFile: () => void;
   onOpenFile: () => void;
   onSave: () => void;
@@ -15,21 +17,23 @@ type ToolbarProps = {
 };
 
 const toolbarShell =
-  "flex items-center gap-2 rounded-2xl bg-[color:var(--islands-surface)] ring-1 ring-[color:var(--islands-ring)] shadow-sm backdrop-blur px-3 py-2";
+  "flex items-center gap-1.5 border-b border-[color:var(--border)] bg-[color:var(--panel)] px-3 py-2";
 
 const buttonBase =
-  "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-[color:var(--islands-text)] ring-1 ring-[color:var(--islands-ring)] bg-transparent hover:bg-[color:var(--islands-ring)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--islands-cursor)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent";
+  "inline-flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm font-medium text-[color:var(--text)] bg-transparent hover:bg-[color:var(--hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent";
 
 const segmentGroup =
-  "inline-flex items-center rounded-lg ring-1 ring-[color:var(--islands-ring)] overflow-hidden";
+  "inline-flex items-center rounded-md border border-[color:var(--border)] overflow-hidden";
 
 const segmentBase =
-  "px-3 py-1.5 text-sm font-medium text-[color:var(--islands-text)] bg-transparent hover:bg-[color:var(--islands-ring)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--islands-cursor)] transition-colors";
+  "px-3 py-1.5 text-sm font-medium text-[color:var(--muted)] bg-transparent hover:bg-[color:var(--hover)] hover:text-[color:var(--text)] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--accent)] transition-colors";
 
-const segmentActive = "bg-[color:var(--islands-ring)]";
+const segmentActive = "bg-[color:var(--accent-soft)] text-[color:var(--accent)]";
 
 const iconButton =
-  "inline-flex items-center justify-center rounded-lg p-1.5 text-[color:var(--islands-text)] ring-1 ring-[color:var(--islands-ring)] bg-transparent hover:bg-[color:var(--islands-ring)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--islands-cursor)] transition-colors";
+  "inline-flex items-center justify-center rounded-md p-1.5 text-[color:var(--muted)] bg-transparent hover:text-[color:var(--text)] hover:bg-[color:var(--hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] transition-colors";
+
+const toolbarDivider = "mx-1 h-6 w-px bg-[color:var(--border)]";
 
 function NewFileIcon() {
   return (
@@ -128,6 +132,25 @@ function SunIcon() {
   );
 }
 
+function PanelLeftIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M9 4v16" />
+    </svg>
+  );
+}
+
 const segments: ReadonlyArray<{ mode: ViewMode; label: string }> = [
   { mode: "editor", label: "Editor" },
   { mode: "split", label: "Split" },
@@ -135,10 +158,9 @@ const segments: ReadonlyArray<{ mode: ViewMode; label: string }> = [
 ];
 
 const autoSaveLabel =
-  "flex items-center gap-2 px-2 text-sm font-medium text-[color:var(--islands-text)] cursor-pointer select-none";
+  "flex items-center gap-2 px-2 text-sm font-medium text-[color:var(--text)] cursor-pointer select-none";
 
-const autoSaveCheckbox =
-  "accent-[color:var(--islands-cursor)] h-4 w-4";
+const autoSaveCheckbox = "accent-[color:var(--accent)] h-4 w-4";
 
 export default function Toolbar({
   viewMode,
@@ -146,6 +168,8 @@ export default function Toolbar({
   saveEnabled,
   saving,
   autoSave,
+  sidebarCollapsed,
+  onToggleSidebar,
   onNewFile,
   onOpenFile,
   onSave,
@@ -155,8 +179,22 @@ export default function Toolbar({
 }: ToolbarProps) {
   const themeLabel =
     theme === "light" ? "Switch to dark theme" : "Switch to light theme";
+  const sidebarLabel = sidebarCollapsed
+    ? "Show recent files (Ctrl+\\)"
+    : "Hide recent files (Ctrl+\\)";
   return (
     <div className={toolbarShell} role="toolbar" aria-label="Workspace controls">
+      <button
+        type="button"
+        className={iconButton}
+        aria-label={sidebarLabel}
+        aria-pressed={!sidebarCollapsed}
+        title={sidebarLabel}
+        onClick={onToggleSidebar}
+      >
+        <PanelLeftIcon />
+      </button>
+      <span className={toolbarDivider} aria-hidden="true" />
       <button type="button" className={buttonBase} onClick={onNewFile}>
         <NewFileIcon />
         <span>New</span>
@@ -185,7 +223,11 @@ export default function Toolbar({
         <FolderOpenIcon />
         <span>Open</span>
       </button>
-      <div className={segmentGroup} role="group" aria-label="View mode">
+      <div
+        className={`${segmentGroup} ml-auto`}
+        role="group"
+        aria-label="View mode"
+      >
         {segments.map(({ mode, label }) => {
           const active = viewMode === mode;
           return (

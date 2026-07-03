@@ -63,17 +63,17 @@ const GROUPED = GROUP_ORDER.map((id) => ({
   actions: FORMAT_ACTIONS.filter((a) => a.group === id),
 }));
 
-const toolbarShell = "flex items-center gap-1 flex-wrap";
-const formatGroup = "inline-flex items-center gap-1";
-const divider = "mx-1 h-5 w-px bg-[color:var(--islands-muted)]/30";
+const toolbarShell = "flex items-center gap-0.5 flex-nowrap";
+const formatGroup = "inline-flex items-center gap-0.5";
+const divider = "mx-1 h-5 w-px bg-[color:var(--border)]";
 
 // Two complete, mutually-exclusive class strings (rather than layering an
-// "active" modifier) so Tailwind never has to resolve conflicting bg/text/ring
+// "active" modifier) so Tailwind never has to resolve conflicting bg/text
 // utilities by stylesheet order.
 const iconButtonBase =
-  "inline-flex items-center justify-center rounded-lg p-1.5 ring-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--islands-cursor)] transition-colors";
-const iconButtonInactive = `${iconButtonBase} bg-transparent text-[color:var(--islands-text)] ring-[color:var(--islands-ring)] hover:bg-[color:var(--islands-ring)]`;
-const iconButtonActive = `${iconButtonBase} bg-[color:var(--islands-ring)] text-[color:var(--islands-cursor)] ring-[color:var(--islands-cursor)]`;
+  "inline-flex items-center justify-center rounded-md p-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] transition-colors";
+const iconButtonInactive = `${iconButtonBase} bg-transparent text-[color:var(--muted)] hover:text-[color:var(--text)] hover:bg-[color:var(--hover)]`;
+const iconButtonActive = `${iconButtonBase} bg-[color:var(--accent-soft)] text-[color:var(--accent)]`;
 
 function prettyShortcut(shortcut: string, modKey: string): string {
   return shortcut

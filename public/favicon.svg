@@ -1,29 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <!--
     markpad app icon — the Markdown mark (a blocky "M" beside a downward
-    arrow) in white on a rounded indigo tile. The glyphs are encoded as
-    SVG paths (not <text>) so resvg / `tauri icon` rasterizes them without
-    needing a system font. Indigo palette kept from the original brand.
+    arrow) in white on a flat rounded indigo tile. Flat single-accent fill
+    (#6366f1, the app's accent) to match the flat, edge-to-edge redesign —
+    no gradient. The glyphs are encoded as SVG paths (not <text>) so resvg /
+    `tauri icon` rasterizes them without needing a system font.
   -->
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#6366f1"/>
-      <stop offset="100%" stop-color="#4338ca"/>
-    </linearGradient>
-  </defs>
-
-  <rect width="1024" height="1024" rx="200" ry="200" fill="url(#bg)"/>
+  <rect width="1024" height="1024" rx="224" ry="224" fill="#6366f1"/>
 
   <g fill="#ffffff">
-    <g transform="translate(254 332)">
-      <!-- M (200 x 280) scaled to 257 x 360 -->
-      <g transform="scale(1.2857)">
-        <path d="M0,280 V0 H50 L100,130 L150,0 H200 V280 H150 V90 L115,200 H85 L50,90 V280 Z"/>
-      </g>
-      <!-- Downward arrow (200 x 360), placed to the right of the M -->
-      <g transform="translate(317 0)">
-        <path d="M60,0 H140 V170 H200 L100,360 L0,170 H60 Z"/>
-      </g>
+    <!-- M (200 x 280) -->
+    <g transform="translate(240.75 322) scale(1.3571)">
+      <path d="M0,280 V0 H50 L100,130 L150,0 H200 V280 H150 V90 L115,200 H85 L50,90 V280 Z"/>
+    </g>
+    <!-- Downward arrow (200 x 360), placed to the right of the M -->
+    <g transform="translate(572.15 322) scale(1.0556)">
+      <path d="M60,0 H140 V170 H200 L100,360 L0,170 H60 Z"/>
     </g>
   </g>
 </svg>

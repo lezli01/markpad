@@ -34,7 +34,7 @@ const Preview = forwardRef<PreviewHandle, PreviewProps>(function Preview(
     return (
       <div
         ref={divRef}
-        className="markpad-preview h-full overflow-auto p-4 text-sm italic text-[color:var(--islands-muted)]"
+        className="markpad-preview h-full overflow-auto p-4 text-sm italic text-[color:var(--muted)]"
       >
         Preview will appear here.
       </div>

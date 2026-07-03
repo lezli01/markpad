@@ -31,11 +31,17 @@ type EditorProps = {
   onActiveFormatsChange?: (active: FormatAction[]) => void;
 };
 
-const islandsTheme = EditorView.theme({
+const editorTheme = EditorView.theme({
   "&": {
     height: "100%",
-    color: "var(--islands-text)",
+    color: "var(--text)",
     backgroundColor: "transparent",
+  },
+  // Drop CodeMirror's default dotted focus outline (the "select rectangle"
+  // around the whole editor). Focus is already obvious from the caret; the
+  // outline just clutters the flat, edge-to-edge pane.
+  "&.cm-focused": {
+    outline: "none",
   },
   ".cm-scroller": {
     fontFamily:
@@ -44,20 +50,20 @@ const islandsTheme = EditorView.theme({
     lineHeight: "1.6",
   },
   ".cm-content": {
-    caretColor: "var(--islands-cursor)",
+    caretColor: "var(--accent)",
     padding: "0.5rem 0",
   },
   ".cm-cursor, .cm-dropCursor": {
-    borderLeftColor: "var(--islands-cursor)",
+    borderLeftColor: "var(--accent)",
   },
   "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection":
     {
-      backgroundColor: "var(--islands-selection)",
+      backgroundColor: "var(--selection)",
     },
   ".cm-gutters": {
     backgroundColor: "transparent",
     borderRight: "none",
-    color: "var(--islands-muted)",
+    color: "var(--muted)",
   },
   ".cm-activeLineGutter, .cm-activeLine": {
     backgroundColor: "transparent",
@@ -95,6 +101,38 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     cb(active);
   }, []);
 
+  // Build a fresh EditorState for a document. Used both on mount and whenever the
+  // active document is swapped from outside (via the `value` prop). Because the
+  // single EditorView is persistent (kept mounted across view-mode switches so
+  // selection/cursor/history survive), swapping documents MUST replace the whole
+  // state — a plain change transaction would leave the previous document's undo
+  // history live, so one undo could pull another file's content into this buffer.
+  const buildState = useCallback(
+    (doc: string): EditorState =>
+      EditorState.create({
+        doc,
+        extensions: [
+          history(),
+          // Formatting shortcuts (Mod-b, Mod-i, …) take precedence so they win
+          // over any default binding for the same chord.
+          Prec.high(keymap.of([...markdownFormattingKeymap])),
+          keymap.of([...defaultKeymap, ...historyKeymap]),
+          markdown(),
+          EditorView.lineWrapping,
+          editorTheme,
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged) {
+              onChangeRef.current(update.state.doc.toString());
+            }
+            if (update.docChanged || update.selectionSet) {
+              emitActiveFormats(update.state);
+            }
+          }),
+        ],
+      }),
+    [emitActiveFormats],
+  );
+
   useImperativeHandle(
     ref,
     () => ({
@@ -124,27 +162,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     if (!containerRef.current) return;
 
     const view = new EditorView({
-      state: EditorState.create({
-        doc: value,
-        extensions: [
-          history(),
-          // Formatting shortcuts (Mod-b, Mod-i, …) take precedence so they win
-          // over any default binding for the same chord.
-          Prec.high(keymap.of([...markdownFormattingKeymap])),
-          keymap.of([...defaultKeymap, ...historyKeymap]),
-          markdown(),
-          EditorView.lineWrapping,
-          islandsTheme,
-          EditorView.updateListener.of((update) => {
-            if (update.docChanged) {
-              onChangeRef.current(update.state.doc.toString());
-            }
-            if (update.docChanged || update.selectionSet) {
-              emitActiveFormats(update.state);
-            }
-          }),
-        ],
-      }),
+      state: buildState(value),
       parent: containerRef.current,
     });
     viewRef.current = view;
@@ -158,16 +176,18 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // An external `value` that differs from the view means the active document was
+  // swapped (or reloaded from disk). Replace the whole state so undo history and
+  // cursor reset with the new document rather than bleeding across files. Typing
+  // never reaches here — onChange keeps `value` equal to the view's own doc.
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
-    const current = view.state.doc.toString();
-    if (current !== value) {
-      view.dispatch({
-        changes: { from: 0, to: current.length, insert: value },
-      });
+    if (view.state.doc.toString() !== value) {
+      view.setState(buildState(value));
+      emitActiveFormats(view.state);
     }
-  }, [value]);
+  }, [value, buildState, emitActiveFormats]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 });
