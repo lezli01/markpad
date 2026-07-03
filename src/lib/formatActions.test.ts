@@ -154,3 +154,53 @@ describe("toggle run — unwraps the detected span (matches what the toggle show
     expect(getActiveFormatActions(next)).not.toContain("bold");
   });
 });
+
+describe("inlineToggleTransaction — wrapping (bold / italic / strikethrough)", () => {
+  it("wraps a selection in each emphasis marker", () => {
+    expect(applyInline("[hello]", "**")).toBe("**hello**");
+    expect(applyInline("[hello]", "*")).toBe("*hello*");
+    expect(applyInline("[hello]", "~~")).toBe("~~hello~~");
+  });
+
+  it("wraps the word under a collapsed caret", () => {
+    expect(applyInline("hel|lo", "**")).toBe("**hello**");
+    expect(applyInline("hel|lo", "*")).toBe("*hello*");
+  });
+
+  it("adds italic to an already-bold word without eating the bold markers", () => {
+    // The single-'*' marker must not mistake the inner '*' of '**' for its own.
+    expect(applyInline("**hel|lo**", "*")).toBe("***hello***");
+  });
+
+  it("toggles off a bare empty marker pair the tree never parses as a span", () => {
+    expect(applyInline("**|**", "**")).toBe("");
+    expect(applyInline("~~|~~", "~~")).toBe("");
+  });
+
+  it("drops an empty marker pair when there is no word to wrap", () => {
+    expect(applyInline(" | ", "**")).toBe(" **** ");
+  });
+});
+
+describe("inlineCodeToggleTransaction — fence sizing & padding", () => {
+  it("wraps the word under the caret in single backticks", () => {
+    expect(applyCode("fo|o")).toBe("`foo`");
+  });
+
+  it("grows the fence to outlast an interior backtick run", () => {
+    expect(applyCode("[a`b]")).toBe("``a`b``");
+    expect(applyCode("[a``b]")).toBe("```a``b```");
+  });
+
+  it("pads with a space when the content starts or ends with a backtick", () => {
+    expect(applyCode("[`x]")).toBe("`` `x ``");
+  });
+
+  it("unwraps a padded span, dropping one padding space per side", () => {
+    expect(applyCode("`` `|x ``")).toBe("`x");
+  });
+
+  it("drops an empty fence when there is nothing to wrap", () => {
+    expect(applyCode("|")).toBe("``");
+  });
+});

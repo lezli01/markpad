@@ -47,11 +47,11 @@ jobs:
       - name: Lint frontend
         run: npm run lint
 
-      - name: Typecheck & build frontend
-        run: npm run build
-
       - name: Test frontend
         run: npm test
+
+      - name: Typecheck & build frontend
+        run: npm run build
 
       - name: cargo fmt
         working-directory: src-tauri

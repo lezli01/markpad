@@ -80,3 +80,60 @@ describe("headingSlug — heading id and clicked fragment agree", () => {
     expect(headingSlug("hello-world")).toBe("hello-world");
   });
 });
+
+describe("renderMarkdown — sanitization & safe rendering", () => {
+  it("renders basic inline markdown to HTML", () => {
+    expect(renderMarkdown("*hi*")).toContain("<em>hi</em>");
+    expect(renderMarkdown("**hi**")).toContain("<strong>hi</strong>");
+  });
+
+  it("escapes raw HTML instead of emitting it (html:false)", () => {
+    const html = renderMarkdown("<b>x</b> plain");
+    expect(html).not.toContain("<b>x</b>");
+    expect(html).toContain("&lt;b&gt;");
+  });
+
+  it("drops a <script> tag from the output", () => {
+    const html = renderMarkdown("hi\n\n<script>alert(1)</script>");
+    expect(html.toLowerCase()).not.toContain("<script");
+  });
+
+  it("never produces a javascript: link href", () => {
+    const html = renderMarkdown("[click](javascript:alert(1))");
+    expect(html).not.toMatch(/href\s*=\s*["']?\s*javascript:/i);
+  });
+
+  it("linkifies a bare URL", () => {
+    const html = renderMarkdown("see https://example.com now");
+    expect(html).toContain('href="https://example.com"');
+  });
+});
+
+describe("in-document anchors — a rendered heading is reachable by a fragment slug", () => {
+  // Mirrors Preview.tsx's click handler: resolve a clicked "#fragment" through
+  // headingSlug and look for the matching heading id in the rendered HTML. This
+  // locks the cross-module contract that a table-of-contents link finds its
+  // heading despite punctuation or percent-encoding differences.
+  const resolves = (source: string, fragment: string): boolean => {
+    const container = document.createElement("div");
+    container.innerHTML = renderMarkdown(source);
+    let frag = fragment.replace(/^#/, "");
+    try {
+      frag = decodeURIComponent(frag);
+    } catch {
+      // Malformed %-sequence — fall back to the raw fragment (as Preview does).
+    }
+    const id = headingSlug(frag);
+    // headingSlug only ever emits letters/digits/hyphens, so the id is always a
+    // safe attribute-selector value (no CSS.escape needed, and jsdom's global
+    // does not expose it anyway).
+    return !!id && container.querySelector(`[id="${id}"]`) !== null;
+  };
+
+  it("matches a hand-written fragment despite punctuation and encoding", () => {
+    const doc = "## Q&A\n\n### Foo Bar";
+    expect(resolves(doc, "#q&a")).toBe(true); // punctuation differs from the id
+    expect(resolves(doc, "#Foo%20Bar")).toBe(true); // percent-encoded space
+    expect(resolves(doc, "#missing")).toBe(false); // no such heading
+  });
+});
