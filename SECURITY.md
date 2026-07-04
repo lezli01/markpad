@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-markpad is pre-1.0. Security fixes target the current `master` branch unless a release branch is explicitly documented later.
+MarkPad is pre-1.0. Security fixes target the current `master` branch unless a release branch is explicitly documented later.
 
 ## Reporting a Vulnerability
 

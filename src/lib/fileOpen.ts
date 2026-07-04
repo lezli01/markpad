@@ -179,7 +179,7 @@ export async function saveMarkdownFileAs(
 export async function setWindowTitle(fileName: string | null): Promise<void> {
   try {
     const win = getCurrentWebviewWindow();
-    await win.setTitle(fileName ? `${fileName} — markpad` : "markpad");
+    await win.setTitle(fileName ? `${fileName} — MarkPad` : "MarkPad");
   } catch (err) {
     console.warn("Failed to set window title:", err);
   }

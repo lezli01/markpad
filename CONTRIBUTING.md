@@ -1,8 +1,8 @@
-# Contributing to markpad
+# Contributing to MarkPad
 
-Thanks for helping improve markpad, the Markdown editor with live preview.
+Thanks for helping improve MarkPad, the Markdown editor with live preview.
 
-markpad is early-stage and intentionally contributor-friendly: small issues, clear acceptance criteria, and reviewable pull requests are preferred over large surprise changes.
+MarkPad is early-stage and intentionally contributor-friendly: small issues, clear acceptance criteria, and reviewable pull requests are preferred over large surprise changes.
 
 ## Ways to Contribute
 
