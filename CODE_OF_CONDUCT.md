@@ -1,6 +1,6 @@
 # Code of Conduct
 
-markpad should be a welcoming, respectful place to collaborate.
+MarkPad should be a welcoming, respectful place to collaborate.
 
 ## Expected Behavior
 
@@ -26,5 +26,5 @@ To report a conduct concern, contact the maintainer privately using the contact 
 
 ## Scope
 
-This code of conduct applies in project spaces, including GitHub issues, pull requests, discussions, releases, and any other community spaces connected to markpad.
+This code of conduct applies in project spaces, including GitHub issues, pull requests, discussions, releases, and any other community spaces connected to MarkPad.
 

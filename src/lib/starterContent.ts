@@ -1,6 +1,6 @@
-export const starterContent = `# Welcome to markpad
+export const starterContent = `# Welcome to MarkPad
 
-**markpad** (Markdown editor with live preview) is a tiny desktop app that turns plain text into formatted reading on the fly.
+**MarkPad** (Markdown editor with live preview) is a tiny desktop app that turns plain text into formatted reading on the fly.
 
 ## What you're looking at
 

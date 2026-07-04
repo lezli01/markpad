@@ -1,6 +1,6 @@
-# markpad Architecture
+# MarkPad Architecture
 
-markpad is a cross-platform desktop Markdown editor/viewer.
+MarkPad is a cross-platform desktop Markdown editor/viewer.
 
 ## Frontend
 

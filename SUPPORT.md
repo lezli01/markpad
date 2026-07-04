@@ -1,6 +1,6 @@
 # Support
 
-markpad is an early open-source project. The best support path depends on what you need.
+MarkPad is an early open-source project. The best support path depends on what you need.
 
 ## Bug Reports
 

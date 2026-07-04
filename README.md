@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="public/favicon.svg" alt="markpad logo" width="96">
+  <img src="public/favicon.svg" alt="MarkPad logo" width="96">
 </p>
 
-<h1 align="center">markpad</h1>
+<h1 align="center">MarkPad</h1>
 
 <p align="center">
   <strong>A lightweight, cross-platform Markdown editor with live preview.</strong>
@@ -31,15 +31,15 @@
 
 ---
 
-![markpad in the dark theme: a recent-files sidebar on the left, a flat single-surface layout, the Markdown formatting toolbar above the editor, sample Markdown in the editor pane, and its live rendering in the preview pane](docs/images/screenshot.png)
+![MarkPad in the dark theme: a recent-files sidebar on the left, a flat single-surface layout, the Markdown formatting toolbar above the editor, sample Markdown in the editor pane, and its live rendering in the preview pane](docs/images/screenshot.png)
 
-## Why markpad?
+## Why MarkPad?
 
 Most Markdown editors ask for a tradeoff: a heavyweight Electron app that ships a
 whole browser to render a text file, a web app that wants your documents in the
 cloud, or a bare editor with no live preview at all.
 
-markpad is the small, local-first alternative — a native desktop app that opens
+MarkPad is the small, local-first alternative — a native desktop app that opens
 quickly, keeps every file on your machine, and shows your Markdown rendered side
 by side as you type. A recent-files sidebar, a one-click formatting toolbar,
 light/dark theming, optional auto-save, and real OS file-association handling make
@@ -51,7 +51,7 @@ It is released under the [MIT License](LICENSE) and created by `lezli01` at
 
 ## Features
 
-Open a `.md` file and markpad treats editing and previewing as first-class,
+Open a `.md` file and MarkPad treats editing and previewing as first-class,
 side-by-side work:
 
 - **Live split-pane preview.** Edit Markdown on the left, see it rendered on the right, with each pane scrolling independently.
@@ -63,8 +63,8 @@ side-by-side work:
 - **New empty file.** Start a fresh Markdown document from the toolbar or `Ctrl+N` / `⌘N`; it appears in the recents list as an untitled draft, and the first Save prompts for a path.
 - **Light and dark theme.** Honors the operating system's appearance preference by default, with a manual toggle in the toolbar.
 - **Open files from disk.** Native file picker biased toward `.md` and `.markdown`, with a fallback to all files.
-- **Open files from your file manager.** Set markpad as the default for `.md` and a double-click opens markpad (or routes to the running instance).
-- **One window per user.** markpad runs as a single instance; new file requests bring the existing window to the foreground.
+- **Open files from your file manager.** Set MarkPad as the default for `.md` and a double-click opens MarkPad (or routes to the running instance).
+- **One window per user.** MarkPad runs as a single instance; new file requests bring the existing window to the foreground.
 - **Save back to disk.** Manual Save plus a visible modified indicator in the recents list so you always know whether your edits are on disk.
 - **Optional auto-save.** Tick the box once and edits land on disk shortly after you stop typing, while a file is open.
 - **Unsaved-change guard.** A file is never closed — only removed from the recents list. Removing an item that has unsaved edits prompts to Save, Discard, or Cancel so reflex clicks don't lose work.
@@ -136,7 +136,7 @@ docs/            Architecture notes and supporting docs
 
 ## Privacy
 
-markpad is local-first. Files stay on your machine and the application does not
+MarkPad is local-first. Files stay on your machine and the application does not
 send your content over the network. Preferences are stored in the local browser
 storage of the desktop runtime. Session state — your recent-files list, the active
 document, and any unsaved drafts — is stored locally in your platform's standard
@@ -154,7 +154,7 @@ restore are working today. Specs for shipped and in-progress features live under
 ## Contributing
 
 Contributions of every size are welcome — bug reports, docs, new features, and
-test cases. markpad is spec-driven and intentionally contributor-friendly: every
+test cases. MarkPad is spec-driven and intentionally contributor-friendly: every
 meaningful feature begins with a short spec under [`specs/`](specs) and clear
 acceptance criteria before implementation. Start here:
 
@@ -174,7 +174,7 @@ are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Security
 
-markpad is local-first and sanitizes all rendered HTML before display, so its
+MarkPad is local-first and sanitizes all rendered HTML before display, so its
 attack surface is small — but security reports are taken seriously. Please do not
 open a public issue for suspected vulnerabilities; report them privately via
 GitHub's private vulnerability reporting for this repository. See
@@ -182,4 +182,4 @@ GitHub's private vulnerability reporting for this repository. See
 
 ## License
 
-`markpad` is released under the [MIT License](LICENSE). © 2026 lezli01.
+MarkPad is released under the [MIT License](LICENSE). © 2026 lezli01.
