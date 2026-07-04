@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.0](https://github.com/lezli01/markpad/compare/v0.6.0...v0.7.0) (2026-07-04)
+
+
+### Features
+
+* show absolute path under recent files with 2-line clamp ([4b75ffe](https://github.com/lezli01/markpad/commit/4b75ffe8ec9f54b89bba425d6206235b3b54b817))
+* show absolute path under recent files with 2-line clamp ([e4dd6b4](https://github.com/lezli01/markpad/commit/e4dd6b4e40b8059b3397d73b86ac959dde3a2e69))
+
 ## [0.6.0](https://github.com/lezli01/markpad/compare/v0.5.0...v0.6.0) (2026-07-03)
 
 

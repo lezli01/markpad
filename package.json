@@ -2,7 +2,7 @@
   "name": "markpad",
   "private": true,
   "description": "Markdown editor with live preview",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "license": "MIT",
   "repository": {
     "type": "git",
