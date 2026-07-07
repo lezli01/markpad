@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.1](https://github.com/lezli01/markpad/compare/v0.7.0...v0.7.1) (2026-07-07)
+
+
+### Bug Fixes
+
+* enable raw HTML for anchor navigation ([88dc621](https://github.com/lezli01/markpad/commit/88dc6213e025a897bc260cb1a2509f7cb159de57))
+* enable raw HTML to support anchor navigation in TOC ([3af56ac](https://github.com/lezli01/markpad/commit/3af56ace00ee187ba9cb885c72511755fc3a633a))
+
 ## [0.7.0](https://github.com/lezli01/markpad/compare/v0.6.0...v0.7.0) (2026-07-04)
 
 
