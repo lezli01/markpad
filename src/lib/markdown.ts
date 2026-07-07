@@ -33,7 +33,7 @@ export function headingSlug(text: string): string {
 }
 
 const md = new MarkdownIt({
-  html: false,
+  html: true,
   linkify: true,
   typographer: true,
   breaks: false,
