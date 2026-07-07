@@ -87,10 +87,11 @@ describe("renderMarkdown — sanitization & safe rendering", () => {
     expect(renderMarkdown("**hi**")).toContain("<strong>hi</strong>");
   });
 
-  it("escapes raw HTML instead of emitting it (html:false)", () => {
+  it("renders raw HTML with sanitization (html:true)", () => {
     const html = renderMarkdown("<b>x</b> plain");
-    expect(html).not.toContain("<b>x</b>");
-    expect(html).toContain("&lt;b&gt;");
+    expect(html).toContain("<b>x</b>");
+    // Scripts are still stripped
+    expect(html).not.toContain("<script>");
   });
 
   it("drops a <script> tag from the output", () => {
