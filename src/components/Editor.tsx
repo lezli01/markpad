@@ -9,12 +9,17 @@ import { EditorState, Prec, type StateEffect } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
+import { json } from "@codemirror/lang-json";
+import { basicSetup } from "codemirror";
+
 import {
   type FormatAction,
   getActiveFormatActions,
   markdownFormattingKeymap,
   runFormatAction,
 } from "../lib/formatActions";
+
+
 
 export type EditorHandle = {
   getState(): EditorState;
@@ -29,6 +34,7 @@ type EditorProps = {
   value: string;
   onChange: (next: string) => void;
   onActiveFormatsChange?: (active: FormatAction[]) => void;
+  fileType: 'markdown' | 'json';
 };
 
 const editorTheme = EditorView.theme({
@@ -71,7 +77,7 @@ const editorTheme = EditorView.theme({
 });
 
 const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
-  { value, onChange, onActiveFormatsChange },
+  { value, onChange, onActiveFormatsChange, fileType },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -92,6 +98,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   // toolbar, deduped so we don't re-render it on every keystroke that doesn't
   // change the active set.
   const emitActiveFormats = useCallback((state: EditorState) => {
+    if (fileType !== 'markdown') return;
     const cb = onActiveFormatsChangeRef.current;
     if (!cb) return;
     const active = getActiveFormatActions(state);
@@ -99,7 +106,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     if (key === lastActiveKeyRef.current) return;
     lastActiveKeyRef.current = key;
     cb(active);
-  }, []);
+  }, [fileType]);
 
   // Build a fresh EditorState for a document. Used both on mount and whenever the
   // active document is swapped from outside (via the `value` prop). Because the
@@ -108,8 +115,25 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   // state — a plain change transaction would leave the previous document's undo
   // history live, so one undo could pull another file's content into this buffer.
   const buildState = useCallback(
-    (doc: string): EditorState =>
-      EditorState.create({
+    (doc: string): EditorState => {
+      if (fileType === 'json') {
+        return EditorState.create({
+          doc,
+          extensions: [
+            basicSetup, // Apply CodeMirror's basic setup including syntax highlighting and folding
+            json(),
+            EditorView.lineWrapping,
+            editorTheme,
+            EditorView.updateListener.of((update) => {
+              if (update.docChanged) {
+                onChangeRef.current(update.state.doc.toString());
+              }
+            }),
+          ],
+        });
+      }
+
+      return EditorState.create({
         doc,
         extensions: [
           history(),
@@ -131,8 +155,9 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
             }
           }),
         ],
-      }),
-    [emitActiveFormats],
+      });
+    },
+    [emitActiveFormats, fileType]
   );
 
   useImperativeHandle(
@@ -157,7 +182,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       },
       focus: () => viewRef.current?.focus(),
     }),
-    [emitActiveFormats],
+    [emitActiveFormats]
   );
 
   useEffect(() => {

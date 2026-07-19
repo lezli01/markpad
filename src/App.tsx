@@ -38,6 +38,7 @@ import {
   type Theme,
   type ViewMode,
 } from "./lib/preferences";
+import { detectFileType } from "./lib/fileType";
 
 export type ItemId = string;
 
@@ -55,6 +56,7 @@ export type RecentItem = {
   text: string;
   savedText: string;
   lastActive: number;
+  fileType?: 'markdown' | 'json';
 };
 
 type ItemSnapshot = {
@@ -375,6 +377,16 @@ function App() {
         })
         .filter((t) => t.kind === "untitled" || (t.path?.length ?? 0) > 0);
 
+      // Detect file types for existing items
+      restored.forEach(item => {
+        if (item.kind === 'file' && item.path) {
+          const type = detectFileType(item.path);
+          if (type !== 'unknown') {
+            item.fileType = type;
+          }
+        }
+      });
+
       activeCounterRef.current = count + 1;
 
       let initialActiveId: ItemId | null = null;
@@ -468,6 +480,7 @@ function App() {
     return () => clearTimeout(handle);
   }, [items, activeId]);
 
+
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
@@ -540,6 +553,7 @@ function App() {
       detachActive();
       const stamp = nextActive();
       const id = nextItemId();
+      const type = detectFileType(result.path);
       const newItem: RecentItem = {
         id,
         kind: "file",
@@ -549,6 +563,7 @@ function App() {
         text: result.content,
         savedText: result.content,
         lastActive: stamp,
+        fileType: type === 'unknown' ? 'markdown' : type,
       };
       const prevActive = activeIdRef.current;
       setItems((prev) => capList([...prev, newItem], id, prevActive));
@@ -574,6 +589,7 @@ function App() {
       }
       const stamp = nextActive();
       const id = nextItemId();
+      const type = detectFileType(path);
       const newItem: RecentItem = {
         id,
         kind: "file",
@@ -583,6 +599,7 @@ function App() {
         text: "",
         savedText: "",
         lastActive: stamp,
+        fileType: type === 'unknown' ? 'markdown' : type,
       };
       const prevActive = activeIdRef.current;
       const next = capList([...itemsRef.current, newItem], id, prevActive);
@@ -876,6 +893,13 @@ function App() {
               modKey={modKey}
               editorRef={editorRef}
               previewRef={previewRef}
+              fileType={
+                activeItem.fileType ??
+                (() => {
+                  const type = detectFileType(activeItem.path);
+                  return type === 'unknown' ? 'markdown' : type;
+                })()
+              }
             />
           )}
         </div>

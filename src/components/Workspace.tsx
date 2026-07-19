@@ -36,7 +36,8 @@ export default function Workspace({
   modKey,
   editorRef,
   previewRef,
-}: WorkspaceProps) {
+  fileType = 'markdown',
+}: WorkspaceProps & { fileType: 'markdown' | 'json' }) {
   const [activeFormats, setActiveFormats] = useState<FormatAction[]>([]);
 
   // Editor MUST stay mounted across every view-mode switch so CodeMirror's
@@ -78,11 +79,14 @@ export default function Workspace({
               }
             }}
           >
-            <FormatToolbar
-              onFormat={onFormat}
-              modKey={modKey}
-              activeFormats={activeFormats}
-            />
+            {/* Show FormatToolbar only for markdown files */}
+            {fileType === 'markdown' && (
+              <FormatToolbar
+                onFormat={onFormat}
+                modKey={modKey}
+                activeFormats={activeFormats}
+              />
+            )}
           </div>
         </div>
         <div className="flex-1 min-h-0 px-4 py-2">
@@ -91,6 +95,7 @@ export default function Workspace({
             value={text}
             onChange={onTextChange}
             onActiveFormatsChange={setActiveFormats}
+            fileType={fileType}
           />
         </div>
       </section>

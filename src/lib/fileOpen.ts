@@ -101,6 +101,7 @@ export async function openMarkdownFile(): Promise<OpenResult> {
       directory: false,
       filters: [
         { name: "Markdown", extensions: ["md", "markdown"] },
+        { name: "JSON", extensions: ["json"] },
         { name: "All Files", extensions: ["*"] },
       ],
     });
@@ -154,6 +155,7 @@ export async function saveMarkdownFileAs(
     picked = await save({
       filters: [
         { name: "Markdown", extensions: ["md", "markdown"] },
+        { name: "JSON", extensions: ["json"] },
         { name: "All Files", extensions: ["*"] },
       ],
       defaultPath: defaultName,
