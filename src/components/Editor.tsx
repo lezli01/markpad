@@ -5,7 +5,12 @@ import {
   useImperativeHandle,
   useRef,
 } from "react";
-import { EditorState, Prec, type StateEffect } from "@codemirror/state";
+import {
+  Compartment,
+  EditorState,
+  Prec,
+  type StateEffect,
+} from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
@@ -43,9 +48,10 @@ type EditorProps = {
   language: DocumentLanguage;
   onChange: (next: string) => void;
   onActiveFormatsChange?: (active: FormatAction[]) => void;
-  /** Parse errors from JSON text actions — the editor pane has no chrome of
-      its own for messages, so the app surfaces them in its error banner. */
-  onJsonActionError?: (message: string) => void;
+  /** Outcome of every JSON action: a parse-error message, or null on success
+      so the app can clear a previously shown banner. The editor pane has no
+      chrome of its own for messages. */
+  onJsonActionResult?: (error: string | null) => void;
 };
 
 const editorTheme = EditorView.theme({
@@ -122,15 +128,26 @@ function stateLanguage(state: EditorState): DocumentLanguage {
   return state.facet(languageFacet) === jsonLanguage ? "json" : "markdown";
 }
 
+// The per-language extension set lives in a compartment so a language toggle
+// on the same document reconfigures in place — undo history, selection, and
+// scroll survive. A full setState is reserved for real document swaps.
+const perLanguageConf = new Compartment();
+
+// jsonParseLinter flags an empty buffer ("Unexpected end of JSON input" at
+// offset 0); a brand-new empty JSON draft shouldn't open with an error.
+const jsonLinter = linter((view) =>
+  view.state.doc.toString().trim() === "" ? [] : jsonParseLinter()(view),
+);
+
 const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
-  { value, language, onChange, onActiveFormatsChange, onJsonActionError },
+  { value, language, onChange, onActiveFormatsChange, onJsonActionResult },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
   const onActiveFormatsChangeRef = useRef(onActiveFormatsChange);
-  const onJsonActionErrorRef = useRef(onJsonActionError);
+  const onJsonActionResultRef = useRef(onJsonActionResult);
   const lastActiveKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -142,8 +159,8 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   }, [onActiveFormatsChange]);
 
   useEffect(() => {
-    onJsonActionErrorRef.current = onJsonActionError;
-  }, [onJsonActionError]);
+    onJsonActionResultRef.current = onJsonActionResult;
+  }, [onJsonActionResult]);
 
   // Recompute which toggle actions are active at the selection and notify the
   // toolbar, deduped so we don't re-render it on every keystroke that doesn't
@@ -162,12 +179,46 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
   const dispatchJsonAction = useCallback(
     (view: EditorView, action: JsonAction) => {
-      const error = runJsonAction(view, action);
-      if (error !== null) {
-        onJsonActionErrorRef.current?.(error);
-      }
+      // Always report — null on success clears a previously shown banner.
+      onJsonActionResultRef.current?.(runJsonAction(view, action));
     },
     [],
+  );
+
+  // The extensions that differ between languages, swapped via perLanguageConf.
+  const languageExtensions = useCallback(
+    (lang: DocumentLanguage) =>
+      lang === "json"
+        ? [
+            // Format wins over any default binding for the same chord.
+            Prec.high(
+              keymap.of([
+                {
+                  key: "Shift-Alt-f",
+                  run: (view: EditorView) => {
+                    dispatchJsonAction(view, "format");
+                    return true;
+                  },
+                },
+              ]),
+            ),
+            keymap.of([...foldKeymap]),
+            json(),
+            jsonLinter,
+            syntaxHighlighting(jsonHighlightStyle),
+            lineNumbers(),
+            foldGutter(),
+          ]
+        : [
+            // Formatting shortcuts (Mod-b, Mod-i, …) take precedence so
+            // they win over any default binding for the same chord.
+            Prec.high(keymap.of([...markdownFormattingKeymap])),
+            // GFM base so ~~strikethrough~~ parses as a real
+            // `Strikethrough` node — toolbar toggle detection reads the
+            // parsed tree.
+            markdown({ base: markdownLanguage }),
+          ],
+    [dispatchJsonAction],
   );
 
   // Build a fresh EditorState for a document. Used on mount and whenever the
@@ -184,36 +235,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         extensions: [
           history(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
-          ...(lang === "json"
-            ? [
-                // Format wins over any default binding for the same chord.
-                Prec.high(
-                  keymap.of([
-                    {
-                      key: "Shift-Alt-f",
-                      run: (view: EditorView) => {
-                        dispatchJsonAction(view, "format");
-                        return true;
-                      },
-                    },
-                  ]),
-                ),
-                keymap.of([...foldKeymap]),
-                json(),
-                linter(jsonParseLinter()),
-                syntaxHighlighting(jsonHighlightStyle),
-                lineNumbers(),
-                foldGutter(),
-              ]
-            : [
-                // Formatting shortcuts (Mod-b, Mod-i, …) take precedence so
-                // they win over any default binding for the same chord.
-                Prec.high(keymap.of([...markdownFormattingKeymap])),
-                // GFM base so ~~strikethrough~~ parses as a real
-                // `Strikethrough` node — toolbar toggle detection reads the
-                // parsed tree.
-                markdown({ base: markdownLanguage }),
-              ]),
+          perLanguageConf.of(languageExtensions(lang)),
           EditorView.lineWrapping,
           editorTheme,
           EditorView.updateListener.of((update) => {
@@ -226,7 +248,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           }),
         ],
       }),
-    [emitActiveFormats, dispatchJsonAction],
+    [emitActiveFormats, languageExtensions],
   );
 
   useImperativeHandle(
@@ -280,24 +302,29 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   }, []);
 
   // An external `value` that differs from the view means the active document
-  // was swapped (or reloaded from disk); a language mismatch means the user
-  // toggled the document's language. Either way, replace the whole state so
-  // undo history and cursor reset with the new configuration rather than
-  // bleeding across files. (Snapshot restores via setState land before this
-  // effect runs and already match both doc and language, so they don't
-  // trigger a rebuild.) Typing never reaches here — onChange keeps `value`
-  // equal to the view's own doc.
+  // was swapped (or reloaded from disk). Replace the whole state so undo
+  // history and cursor reset with the new document rather than bleeding
+  // across files. A language mismatch alone means the user toggled the
+  // language of the document they are editing — reconfigure the compartment
+  // in place so undo history, selection, and scroll survive. (Snapshot
+  // restores via setState land before this effect runs and already match
+  // both doc and language, so they trigger neither branch.) Typing never
+  // reaches here — onChange keeps `value` equal to the view's own doc.
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
-    if (
-      view.state.doc.toString() !== value ||
-      stateLanguage(view.state) !== language
-    ) {
+    if (view.state.doc.toString() !== value) {
       view.setState(buildState(value, language));
       emitActiveFormats(view.state);
+    } else if (stateLanguage(view.state) !== language) {
+      view.dispatch({
+        effects: perLanguageConf.reconfigure(languageExtensions(language)),
+      });
+      // The reconfigure transaction changes neither doc nor selection, so the
+      // update listener won't re-emit; do it here (markdown -> [] and back).
+      emitActiveFormats(view.state);
     }
-  }, [value, language, buildState, emitActiveFormats]);
+  }, [value, language, buildState, languageExtensions, emitActiveFormats]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 });

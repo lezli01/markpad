@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   asDocumentLanguage,
+  hasLanguageExtension,
   languageFromPath,
   resolveLanguage,
 } from "./documentLanguage";
@@ -33,6 +34,20 @@ describe("resolveLanguage", () => {
   it("falls back to the path without an override", () => {
     expect(resolveLanguage("data.json", null)).toBe("json");
     expect(resolveLanguage(null, null)).toBe("markdown");
+  });
+});
+
+describe("hasLanguageExtension", () => {
+  it("recognizes the language-bearing extensions", () => {
+    expect(hasLanguageExtension("a.json")).toBe(true);
+    expect(hasLanguageExtension("a.md")).toBe(true);
+    expect(hasLanguageExtension("a.MARKDOWN")).toBe(true);
+  });
+
+  it("rejects extensionless and unknown extensions", () => {
+    expect(hasLanguageExtension("notes")).toBe(false);
+    expect(hasLanguageExtension("notes.txt")).toBe(false);
+    expect(hasLanguageExtension("archive.json.bak")).toBe(false);
   });
 });
 

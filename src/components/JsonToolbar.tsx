@@ -74,8 +74,9 @@ export default function JsonToolbar({ onAction }: JsonToolbarProps) {
                 key={action.id}
                 type="button"
                 className={textButton}
+                // No aria-label: the visible text IS the accessible name
+                // (WCAG 2.5.3 Label in Name); the title adds detail only.
                 title={action.title}
-                aria-label={action.title}
                 // Keep the editor's selection — don't let the button steal
                 // focus before the command runs; Editor restores focus after.
                 onMouseDown={(e) => e.preventDefault()}
