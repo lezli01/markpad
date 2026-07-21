@@ -10,8 +10,8 @@
 
 <p align="center">
   Edit Markdown on the left, see it rendered on the right — with a recent-files<br>
-  sidebar, a formatting toolbar, light/dark theming, auto-save, and OS file-association<br>
-  handling, in a small native <code>Tauri</code> app for Windows, Linux, and macOS.
+  sidebar, a formatting toolbar, JSON editing, light/dark theming, auto-save, and OS<br>
+  file-association handling, in a small native <code>Tauri</code> app for Windows, Linux, and macOS.
 </p>
 
 <p align="center">
@@ -58,12 +58,13 @@ side-by-side work:
 - **In-document link navigation.** Headings get anchor ids, so clicking an in-page link in the preview — like a table of contents `[Section](#section)` — smooth-scrolls to that heading within the preview pane.
 - **Formatting toolbar.** One-click Markdown formatting from the editor header — bold, italic, strikethrough, inline code, headings, bullet/numbered lists, quotes, links, images, code blocks, tables, and horizontal rules — with shortcuts for the common ones (`Ctrl/⌘+B`, `+I`, `+E`, `+K`, and more). Buttons toggle the mark off when reapplied and light up to show the formatting at the cursor.
 - **Three view modes.** Editor-only, preview-only, or side-by-side — switch at any time without losing the editor's content, selection, or undo history.
+- **JSON file support.** Open a `.json` file (or switch any buffer with the pane-header language toggle) for syntax highlighting, live validation, line numbers, and collapse/expand of objects and arrays — plus one-click Format (2-space indent, `Shift+Alt+F`), Minify, and Sort keys. JSON documents are editor-only; the Markdown preview and format toolbar step aside while one is active.
 - **Recent files sidebar.** A left-hand panel lists up to 50 recently opened items — most-recent first, with modified files pinned to the top and marked. Click one to open it; modified and untitled documents keep their unsaved edits, cursor, and scroll position.
 - **Collapsible, resizable sidebar.** Drag the divider to resize the recents panel, or hide it entirely for distraction-free writing with the toolbar toggle or `Ctrl+\`; the width and collapsed state persist.
 - **New empty file.** Start a fresh Markdown document from the toolbar or `Ctrl+N` / `⌘N`; it appears in the recents list as an untitled draft, and the first Save prompts for a path.
 - **Light and dark theme.** Honors the operating system's appearance preference by default, with a manual toggle in the toolbar.
-- **Open files from disk.** Native file picker biased toward `.md` and `.markdown`, with a fallback to all files.
-- **Open files from your file manager.** Set MarkPad as the default for `.md` and a double-click opens MarkPad (or routes to the running instance).
+- **Open files from disk.** Native file picker biased toward `.md`, `.markdown`, and `.json`, with a fallback to all files.
+- **Open files from your file manager.** Set MarkPad as the default for `.md` or `.json` and a double-click opens MarkPad (or routes to the running instance).
 - **One window per user.** MarkPad runs as a single instance; new file requests bring the existing window to the foreground.
 - **Save back to disk.** Manual Save plus a visible modified indicator in the recents list so you always know whether your edits are on disk.
 - **Optional auto-save.** Tick the box once and edits land on disk shortly after you stop typing, while a file is open.
@@ -146,8 +147,8 @@ application-data directory; nothing is sent over the network.
 
 Early development, but already usable day-to-day. The split-pane workspace, the
 recent-files sidebar with draft persistence, file open/save, view modes, theming,
-auto-save, OS file-association handling, single-instance routing, and session
-restore are working today. Specs for shipped and in-progress features live under
+auto-save, JSON editing with formatting and folding, OS file-association handling,
+single-instance routing, and session restore are working today. Specs for shipped and in-progress features live under
 [`specs/`](specs); open issues and follow-ups are in the
 [issue tracker](https://github.com/lezli01/markpad/issues).
 
