@@ -14,14 +14,20 @@ import ConfirmDialog from "./components/ConfirmDialog";
 import type { EditorHandle } from "./components/Editor";
 import type { PreviewHandle } from "./components/Preview";
 import {
-  openMarkdownFile,
-  openMarkdownFileByPath,
-  saveMarkdownFile,
-  saveMarkdownFileAs,
+  openTextFile,
+  openTextFileByPath,
+  saveTextFile,
+  saveTextFileAs,
   setWindowTitle,
 } from "./lib/fileOpen";
 import { getPendingFiles, subscribeToOpenFiles } from "./lib/launchFiles";
 import { loadSession, saveSession, type SessionItem } from "./lib/session";
+import {
+  asDocumentLanguage,
+  hasLanguageExtension,
+  resolveLanguage,
+  type DocumentLanguage,
+} from "./lib/documentLanguage";
 import {
   getAutoSave,
   getSidebarCollapsed,
@@ -55,6 +61,10 @@ export type RecentItem = {
   text: string;
   savedText: string;
   lastActive: number;
+  /** Manual language choice from the pane-header toggle; null means "derive
+      from the path" (see resolveLanguage). Cleared on Save-As, where the
+      chosen extension becomes authoritative. */
+  languageOverride: DocumentLanguage | null;
 };
 
 type ItemSnapshot = {
@@ -128,7 +138,8 @@ function EmptyState({ modKey }: { modKey: string }) {
           No file open
         </h2>
         <p className="text-sm text-[color:var(--muted)] mb-6">
-          Open an existing markdown file or create a new one to start editing.
+          Open an existing markdown or JSON file, or create a new one to start
+          editing.
         </p>
         <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 items-center text-sm text-[color:var(--text)] text-left">
           <kbd className={kbdClass}>{modKey}+N</kbd>
@@ -182,6 +193,9 @@ function App() {
 
   const activeItem = items.find((t) => t.id === activeId) ?? null;
   const activeText = activeItem?.text ?? "";
+  const activeLanguage: DocumentLanguage = activeItem
+    ? resolveLanguage(activeItem.path, activeItem.languageOverride)
+    : "markdown";
   const activeSaving =
     activeItem !== null && (savingById[activeItem.id] ?? false);
   const saveEnabled = activeItem !== null && !activeSaving;
@@ -247,7 +261,7 @@ function App() {
     const item = itemsRef.current.find((t) => t.id === id);
     if (!item || item.kind !== "file" || !item.path) return;
     const seq = ++activationSeqRef.current;
-    const result = await openMarkdownFileByPath(item.path);
+    const result = await openTextFileByPath(item.path);
     if (seq !== activationSeqRef.current) return;
     if (result.kind === "ok") {
       setItems((list) =>
@@ -346,6 +360,7 @@ function App() {
               text,
               savedText,
               lastActive: stamp,
+              languageOverride: asDocumentLanguage(s.language),
             };
           }
           const path = s.path ?? "";
@@ -360,6 +375,7 @@ function App() {
               text: s.text,
               savedText: s.saved_text ?? "",
               lastActive: stamp,
+              languageOverride: asDocumentLanguage(s.language),
             };
           }
           return {
@@ -371,6 +387,7 @@ function App() {
             text: "",
             savedText: "",
             lastActive: stamp,
+            languageOverride: asDocumentLanguage(s.language),
           };
         })
         .filter((t) => t.kind === "untitled" || (t.path?.length ?? 0) > 0);
@@ -432,6 +449,7 @@ function App() {
             dirty: t.text !== t.savedText,
             text: t.text,
             saved_text: t.savedText,
+            language: t.languageOverride,
           };
         }
         if (isModified(t)) {
@@ -442,6 +460,7 @@ function App() {
             dirty: true,
             text: t.text,
             saved_text: t.savedText,
+            language: t.languageOverride,
           };
         }
         return {
@@ -451,6 +470,7 @@ function App() {
           dirty: false,
           text: null,
           saved_text: null,
+          language: t.languageOverride,
         };
       });
       let activeIndex: number | null = null;
@@ -520,6 +540,7 @@ function App() {
       text: "",
       savedText: "",
       lastActive: stamp,
+      languageOverride: null,
     };
     const prevActive = activeIdRef.current;
     setItems((prev) => capList([...prev, newItem], id, prevActive));
@@ -529,7 +550,7 @@ function App() {
   }
 
   async function handleOpenFile() {
-    const result = await openMarkdownFile();
+    const result = await openTextFile();
     if (result.kind === "ok") {
       const existing = itemsRef.current.find((t) => t.path === result.path);
       if (existing) {
@@ -549,6 +570,7 @@ function App() {
         text: result.content,
         savedText: result.content,
         lastActive: stamp,
+        languageOverride: null,
       };
       const prevActive = activeIdRef.current;
       setItems((prev) => capList([...prev, newItem], id, prevActive));
@@ -583,6 +605,7 @@ function App() {
         text: "",
         savedText: "",
         lastActive: stamp,
+        languageOverride: null,
       };
       const prevActive = activeIdRef.current;
       const next = capList([...itemsRef.current, newItem], id, prevActive);
@@ -628,7 +651,12 @@ function App() {
     const displayName = item.name;
     let success = false;
     if (item.kind === "untitled") {
-      const result = await saveMarkdownFileAs(outbound, `${item.name}.md`);
+      const language = resolveLanguage(item.path, item.languageOverride);
+      const result = await saveTextFileAs(
+        outbound,
+        `${item.name}.${language === "json" ? "json" : "md"}`,
+        language,
+      );
       if (result.kind === "ok") {
         setItems((list) =>
           list.map((t) =>
@@ -639,6 +667,11 @@ function App() {
                   path: result.path,
                   name: result.name,
                   savedText: outbound,
+                  // A language-bearing extension is authoritative from here
+                  // on; an extensionless/unknown path keeps the user's choice.
+                  languageOverride: hasLanguageExtension(result.path)
+                    ? null
+                    : t.languageOverride,
                 }
               : t,
           ),
@@ -650,7 +683,7 @@ function App() {
       }
       // cancelled: no-op
     } else if (item.path) {
-      const result = await saveMarkdownFile(item.path, outbound);
+      const result = await saveTextFile(item.path, outbound);
       if (result.kind === "ok") {
         setItems((list) =>
           list.map((t) => (t.id === id ? { ...t, savedText: outbound } : t)),
@@ -737,6 +770,16 @@ function App() {
   function handleSetViewMode(mode: ViewMode) {
     setViewMode(mode);
     persistViewMode(mode);
+  }
+
+  function handleSetLanguage(language: DocumentLanguage) {
+    const id = activeIdRef.current;
+    if (id === null) return;
+    setItems((list) =>
+      list.map((t) =>
+        t.id === id ? { ...t, languageOverride: language } : t,
+      ),
+    );
   }
 
   function handleToggleTheme() {
@@ -848,6 +891,7 @@ function App() {
       <div className="flex-1 min-w-0 h-full flex flex-col">
         <Toolbar
           viewMode={viewMode}
+          viewModesEnabled={activeLanguage !== "json"}
           theme={theme}
           saveEnabled={saveEnabled}
           saving={activeSaving}
@@ -870,9 +914,13 @@ function App() {
           ) : (
             <Workspace
               text={activeText}
+              language={activeLanguage}
               viewMode={viewMode}
               onTextChange={updateActiveItemText}
               onFormat={(id) => editorRef.current?.format(id)}
+              onJsonAction={(id) => editorRef.current?.runJsonAction(id)}
+              onJsonActionResult={setError}
+              onLanguageChange={handleSetLanguage}
               modKey={modKey}
               editorRef={editorRef}
               previewRef={previewRef}

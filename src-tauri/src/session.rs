@@ -35,6 +35,10 @@ pub struct SessionItem {
     pub text: Option<String>,
     #[serde(default)]
     pub saved_text: Option<String>,
+    /// Manual language override ("markdown" | "json"); None when the language
+    /// derives from the path. Defaults keep pre-JSON-support records loadable.
+    #[serde(default)]
+    pub language: Option<String>,
 }
 
 // --- v1 (legacy) shape, kept only to migrate old session files. ---
@@ -80,6 +84,7 @@ fn migrate_v1(v1: SessionRecordV1) -> SessionRecord {
             dirty: false,
             text: None,
             saved_text: None,
+            language: None,
         })
         .collect();
     SessionRecord {
