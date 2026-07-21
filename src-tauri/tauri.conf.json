@@ -40,6 +40,13 @@
         ],
         "description": "Markdown document",
         "name": "Markdown"
+      },
+      {
+        "ext": [
+          "json"
+        ],
+        "description": "JSON document",
+        "name": "JSON"
       }
     ]
   }

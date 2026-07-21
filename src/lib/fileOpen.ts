@@ -7,7 +7,7 @@
 //   - src/lib/session.ts        owns load_session / save_session
 //   - src/lib/launchFiles.ts    owns get_pending_files + markpad://open-files event
 //
-// Note: openMarkdownFileByPath reads via the Rust `read_text_file_by_path`
+// Note: openTextFileByPath reads via the Rust `read_text_file_by_path`
 // command rather than the fs plugin's readTextFile because programmatic paths
 // (CLI args, OS file activations, session restore) don't get the fs plugin's
 // implicit per-dialog scope grant. Reading on the Rust side sidesteps the
@@ -17,6 +17,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import type { DocumentLanguage } from "./documentLanguage";
+
+const MARKDOWN_FILTER = { name: "Markdown", extensions: ["md", "markdown"] };
+const JSON_FILTER = { name: "JSON", extensions: ["json"] };
+const ALL_FILES_FILTER = { name: "All Files", extensions: ["*"] };
 
 export type OpenResult =
   | { kind: "ok"; name: string; path: string; content: string }
@@ -75,7 +80,7 @@ function friendlyMessage(err: unknown): string {
   return "This file could not be accessed. It may be locked, read-only, or you may not have permission.";
 }
 
-export async function openMarkdownFileByPath(path: string): Promise<OpenResult> {
+export async function openTextFileByPath(path: string): Promise<OpenResult> {
   if (typeof path !== "string" || path.length === 0) {
     return { kind: "error", message: "Empty path." };
   }
@@ -93,16 +98,13 @@ export async function openMarkdownFileByPath(path: string): Promise<OpenResult> 
   }
 }
 
-export async function openMarkdownFile(): Promise<OpenResult> {
+export async function openTextFile(): Promise<OpenResult> {
   let picked: string | string[] | null;
   try {
     picked = await open({
       multiple: false,
       directory: false,
-      filters: [
-        { name: "Markdown", extensions: ["md", "markdown"] },
-        { name: "All Files", extensions: ["*"] },
-      ],
+      filters: [MARKDOWN_FILTER, JSON_FILTER, ALL_FILES_FILTER],
     });
   } catch (err) {
     console.warn("Open dialog failed:", err);
@@ -132,7 +134,7 @@ export async function openMarkdownFile(): Promise<OpenResult> {
   }
 }
 
-export async function saveMarkdownFile(
+export async function saveTextFile(
   path: string,
   content: string,
 ): Promise<SaveResult> {
@@ -145,17 +147,20 @@ export async function saveMarkdownFile(
   }
 }
 
-export async function saveMarkdownFileAs(
+export async function saveTextFileAs(
   content: string,
   defaultName?: string,
+  language: DocumentLanguage = "markdown",
 ): Promise<SaveAsResult> {
   let picked: string | null;
   try {
     picked = await save({
-      filters: [
-        { name: "Markdown", extensions: ["md", "markdown"] },
-        { name: "All Files", extensions: ["*"] },
-      ],
+      // The document's language leads so the dialog defaults to the right
+      // extension for untitled drafts.
+      filters:
+        language === "json"
+          ? [JSON_FILTER, MARKDOWN_FILTER, ALL_FILES_FILTER]
+          : [MARKDOWN_FILTER, JSON_FILTER, ALL_FILES_FILTER],
       defaultPath: defaultName,
     });
   } catch (err) {

@@ -22,6 +22,10 @@ export type SessionItem = {
   text: string | null;
   /** Disk baseline text captured alongside `text` for accurate dirty tracking. */
   saved_text: string | null;
+  /** Manual language override ("markdown" | "json"); null when the language
+      derives from the path. Absent in records written before JSON support —
+      the Rust side defaults it to null. */
+  language: string | null;
 };
 
 export type SessionRecord = {
