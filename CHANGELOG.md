@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.8.0](https://github.com/lezli01/markpad/compare/v0.7.1...v0.8.0) (2026-07-21)
+
+
+### Features
+
+* add JSON dialog filters, language persistence, .json association ([71ea394](https://github.com/lezli01/markpad/commit/71ea394845e2ea7642a30b3b8ad657757ffb08a1))
+* add JSON document language detection and text actions ([3d710ec](https://github.com/lezli01/markpad/commit/3d710ec2240bb12d1f6ed15a3ad954950ccf6156))
+* add JSON toolbar, language toggle, and editor-only JSON view ([28816e5](https://github.com/lezli01/markpad/commit/28816e58d0b8ae2e18058358151d80eb9cb6f108))
+* JSON file support with highlighting, formatting, validation, and folding ([298b20c](https://github.com/lezli01/markpad/commit/298b20c6873df4d5dfd24ccc4c7e813ae33158ca))
+* per-language editor with JSON highlighting, folding, and lint ([97994af](https://github.com/lezli01/markpad/commit/97994af3516ee691dacfb65801a57b5bfeae4ead))
+
+
+### Bug Fixes
+
+* address adversarial review findings for JSON support ([883f7f0](https://github.com/lezli01/markpad/commit/883f7f06f7c8abf7be3f9fa5d0753a8b7ba16616))
+
 ## [0.7.1](https://github.com/lezli01/markpad/compare/v0.7.0...v0.7.1) (2026-07-07)
 
 
