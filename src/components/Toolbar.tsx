@@ -2,6 +2,9 @@ import type { Theme, ViewMode } from "../lib/preferences";
 
 type ToolbarProps = {
   viewMode: ViewMode;
+  /** False while a JSON document is active — JSON is editor-only, so the
+      Editor/Split/Preview segments are disabled (the preference is kept). */
+  viewModesEnabled: boolean;
   theme: Theme;
   saveEnabled: boolean;
   saving: boolean;
@@ -26,7 +29,7 @@ const segmentGroup =
   "inline-flex items-center rounded-md border border-[color:var(--border)] overflow-hidden";
 
 const segmentBase =
-  "px-3 py-1.5 text-sm font-medium text-[color:var(--muted)] bg-transparent hover:bg-[color:var(--hover)] hover:text-[color:var(--text)] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--accent)] transition-colors";
+  "px-3 py-1.5 text-sm font-medium text-[color:var(--muted)] bg-transparent hover:bg-[color:var(--hover)] hover:text-[color:var(--text)] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--accent)] transition-colors disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[color:var(--muted)]";
 
 const segmentActive = "bg-[color:var(--accent-soft)] text-[color:var(--accent)]";
 
@@ -164,6 +167,7 @@ const autoSaveCheckbox = "accent-[color:var(--accent)] h-4 w-4";
 
 export default function Toolbar({
   viewMode,
+  viewModesEnabled,
   theme,
   saveEnabled,
   saving,
@@ -229,13 +233,20 @@ export default function Toolbar({
         aria-label="View mode"
       >
         {segments.map(({ mode, label }) => {
-          const active = viewMode === mode;
+          const active = viewModesEnabled && viewMode === mode;
           return (
             <button
               key={mode}
               type="button"
               className={`${segmentBase}${active ? ` ${segmentActive}` : ""}`}
               aria-pressed={active}
+              disabled={!viewModesEnabled}
+              aria-disabled={!viewModesEnabled}
+              title={
+                viewModesEnabled
+                  ? undefined
+                  : "View modes are unavailable for JSON documents"
+              }
               onClick={() => onSetViewMode(mode)}
             >
               {label}

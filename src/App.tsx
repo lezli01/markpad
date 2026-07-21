@@ -23,6 +23,10 @@ import {
 import { getPendingFiles, subscribeToOpenFiles } from "./lib/launchFiles";
 import { loadSession, saveSession, type SessionItem } from "./lib/session";
 import {
+  resolveLanguage,
+  type DocumentLanguage,
+} from "./lib/documentLanguage";
+import {
   getAutoSave,
   getSidebarCollapsed,
   getSidebarWidth,
@@ -55,6 +59,10 @@ export type RecentItem = {
   text: string;
   savedText: string;
   lastActive: number;
+  /** Manual language choice from the pane-header toggle; null means "derive
+      from the path" (see resolveLanguage). Cleared on Save-As, where the
+      chosen extension becomes authoritative. */
+  languageOverride: DocumentLanguage | null;
 };
 
 type ItemSnapshot = {
@@ -182,6 +190,9 @@ function App() {
 
   const activeItem = items.find((t) => t.id === activeId) ?? null;
   const activeText = activeItem?.text ?? "";
+  const activeLanguage: DocumentLanguage = activeItem
+    ? resolveLanguage(activeItem.path, activeItem.languageOverride)
+    : "markdown";
   const activeSaving =
     activeItem !== null && (savingById[activeItem.id] ?? false);
   const saveEnabled = activeItem !== null && !activeSaving;
@@ -346,6 +357,7 @@ function App() {
               text,
               savedText,
               lastActive: stamp,
+              languageOverride: null,
             };
           }
           const path = s.path ?? "";
@@ -360,6 +372,7 @@ function App() {
               text: s.text,
               savedText: s.saved_text ?? "",
               lastActive: stamp,
+              languageOverride: null,
             };
           }
           return {
@@ -371,6 +384,7 @@ function App() {
             text: "",
             savedText: "",
             lastActive: stamp,
+            languageOverride: null,
           };
         })
         .filter((t) => t.kind === "untitled" || (t.path?.length ?? 0) > 0);
@@ -520,6 +534,7 @@ function App() {
       text: "",
       savedText: "",
       lastActive: stamp,
+      languageOverride: null,
     };
     const prevActive = activeIdRef.current;
     setItems((prev) => capList([...prev, newItem], id, prevActive));
@@ -549,6 +564,7 @@ function App() {
         text: result.content,
         savedText: result.content,
         lastActive: stamp,
+        languageOverride: null,
       };
       const prevActive = activeIdRef.current;
       setItems((prev) => capList([...prev, newItem], id, prevActive));
@@ -583,6 +599,7 @@ function App() {
         text: "",
         savedText: "",
         lastActive: stamp,
+        languageOverride: null,
       };
       const prevActive = activeIdRef.current;
       const next = capList([...itemsRef.current, newItem], id, prevActive);
@@ -628,7 +645,11 @@ function App() {
     const displayName = item.name;
     let success = false;
     if (item.kind === "untitled") {
-      const result = await saveMarkdownFileAs(outbound, `${item.name}.md`);
+      const language = resolveLanguage(item.path, item.languageOverride);
+      const result = await saveMarkdownFileAs(
+        outbound,
+        `${item.name}.${language === "json" ? "json" : "md"}`,
+      );
       if (result.kind === "ok") {
         setItems((list) =>
           list.map((t) =>
@@ -639,6 +660,8 @@ function App() {
                   path: result.path,
                   name: result.name,
                   savedText: outbound,
+                  // The saved extension is authoritative from here on.
+                  languageOverride: null,
                 }
               : t,
           ),
@@ -737,6 +760,16 @@ function App() {
   function handleSetViewMode(mode: ViewMode) {
     setViewMode(mode);
     persistViewMode(mode);
+  }
+
+  function handleSetLanguage(language: DocumentLanguage) {
+    const id = activeIdRef.current;
+    if (id === null) return;
+    setItems((list) =>
+      list.map((t) =>
+        t.id === id ? { ...t, languageOverride: language } : t,
+      ),
+    );
   }
 
   function handleToggleTheme() {
@@ -848,6 +881,7 @@ function App() {
       <div className="flex-1 min-w-0 h-full flex flex-col">
         <Toolbar
           viewMode={viewMode}
+          viewModesEnabled={activeLanguage !== "json"}
           theme={theme}
           saveEnabled={saveEnabled}
           saving={activeSaving}
@@ -870,9 +904,13 @@ function App() {
           ) : (
             <Workspace
               text={activeText}
+              language={activeLanguage}
               viewMode={viewMode}
               onTextChange={updateActiveItemText}
               onFormat={(id) => editorRef.current?.format(id)}
+              onJsonAction={(id) => editorRef.current?.runJsonAction(id)}
+              onJsonActionError={setError}
+              onLanguageChange={handleSetLanguage}
               modKey={modKey}
               editorRef={editorRef}
               previewRef={previewRef}
