@@ -15,7 +15,9 @@ type WorkspaceProps = {
   onTextChange: (next: string) => void;
   onFormat: (id: FormatAction) => void;
   onJsonAction: (id: JsonAction) => void;
-  onJsonActionError: (message: string) => void;
+  /** Parse-error message from a JSON action, or null on success (clears any
+      previously shown banner). */
+  onJsonActionResult: (error: string | null) => void;
   onLanguageChange: (language: DocumentLanguage) => void;
   modKey: string;
   editorRef?: Ref<EditorHandle>;
@@ -45,7 +47,7 @@ export default function Workspace({
   onTextChange,
   onFormat,
   onJsonAction,
-  onJsonActionError,
+  onJsonActionResult,
   onLanguageChange,
   modKey,
   editorRef,
@@ -129,7 +131,7 @@ export default function Workspace({
             language={language}
             onChange={onTextChange}
             onActiveFormatsChange={setActiveFormats}
-            onJsonActionError={onJsonActionError}
+            onJsonActionResult={onJsonActionResult}
           />
         </div>
       </section>

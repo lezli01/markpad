@@ -9,6 +9,7 @@
 
 import type { EditorView } from "@codemirror/view";
 import { foldAll, unfoldAll } from "@codemirror/language";
+import { isolateHistory } from "@codemirror/commands";
 
 export type JsonTextAction = "format" | "minify" | "sortKeys";
 export type JsonAction = JsonTextAction | "collapseAll" | "expandAll";
@@ -79,7 +80,15 @@ export function runJsonAction(
   if (result.text !== current) {
     view.dispatch({
       changes: { from: 0, to: view.state.doc.length, insert: result.text },
-      selection: { anchor: 0 },
+      // A standalone undo step — never merged into the preceding typing
+      // event, so one Ctrl+Z reverts exactly the rewrite.
+      annotations: isolateHistory.of("full"),
+      // A whole-doc replace can't map the cursor meaningfully; clamping the
+      // old offset at least keeps it in the neighborhood instead of jumping
+      // to the top.
+      selection: {
+        anchor: Math.min(view.state.selection.main.head, result.text.length),
+      },
       scrollIntoView: true,
     });
   }

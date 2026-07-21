@@ -24,6 +24,7 @@ import { getPendingFiles, subscribeToOpenFiles } from "./lib/launchFiles";
 import { loadSession, saveSession, type SessionItem } from "./lib/session";
 import {
   asDocumentLanguage,
+  hasLanguageExtension,
   resolveLanguage,
   type DocumentLanguage,
 } from "./lib/documentLanguage";
@@ -666,8 +667,11 @@ function App() {
                   path: result.path,
                   name: result.name,
                   savedText: outbound,
-                  // The saved extension is authoritative from here on.
-                  languageOverride: null,
+                  // A language-bearing extension is authoritative from here
+                  // on; an extensionless/unknown path keeps the user's choice.
+                  languageOverride: hasLanguageExtension(result.path)
+                    ? null
+                    : t.languageOverride,
                 }
               : t,
           ),
@@ -915,7 +919,7 @@ function App() {
               onTextChange={updateActiveItemText}
               onFormat={(id) => editorRef.current?.format(id)}
               onJsonAction={(id) => editorRef.current?.runJsonAction(id)}
-              onJsonActionError={setError}
+              onJsonActionResult={setError}
               onLanguageChange={handleSetLanguage}
               modKey={modKey}
               editorRef={editorRef}

@@ -16,6 +16,13 @@ export function resolveLanguage(
   return override ?? languageFromPath(path);
 }
 
+/** Whether the path's extension itself expresses a document language. Save-As
+    drops a manual override only for such paths — an extensionless or unknown
+    extension says nothing, so the user's explicit choice stands. */
+export function hasLanguageExtension(path: string): boolean {
+  return /\.(json|md|markdown)$/i.test(path);
+}
+
 /** Validate a persisted value (session records survive schema drift). */
 export function asDocumentLanguage(
   value: unknown,
