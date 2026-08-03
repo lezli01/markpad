@@ -1,5 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
+
+import { idsToClose, type CloseScope } from "../lib/recentsActions";
 
 export type RecentEntry = {
   id: string;
@@ -8,6 +11,9 @@ export type RecentEntry = {
   path: string | null;
   /** True for modified/untitled items — shows the dot and sits in the top tier. */
   modified: boolean;
+  /** True when the buffer differs from its saved baseline. Unlike `modified`,
+      an untouched untitled draft counts as saved, so bulk closes may take it. */
+  unsaved: boolean;
 };
 
 type RecentsPanelProps = {
@@ -16,6 +22,8 @@ type RecentsPanelProps = {
   activeId: string | null;
   onActivate(id: string): void;
   onRemove(id: string): void;
+  /** Closes a batch of items at once; ids are always free of unsaved work. */
+  onRemoveMany(ids: string[]): void;
 };
 
 const header =
@@ -49,7 +57,18 @@ const menuHeader =
 const menuDivider = "mx-1 my-1 h-px bg-[color:var(--border)]";
 
 const menuItem =
-  "flex w-full items-center px-3 py-1.5 text-left hover:bg-[color:var(--hover)] focus:outline-none focus-visible:bg-[color:var(--hover)]";
+  "flex w-full items-center px-3 py-1.5 text-left hover:bg-[color:var(--hover)] focus:outline-none focus-visible:bg-[color:var(--hover)] disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-default";
+
+// Bulk close entries, in menu order. Everything below the first divider closes
+// whole ranges; items with unsaved work are skipped, so an entry goes disabled
+// when its scope resolves to nothing.
+const closeActions: { scope: CloseScope; label: string }[] = [
+  { scope: "others", label: "Close others" },
+  { scope: "above", label: "Close all above" },
+  { scope: "below", label: "Close all below" },
+  { scope: "saved", label: "Close all saved" },
+  { scope: "all", label: "Close all" },
+];
 
 function CloseIcon() {
   return (
@@ -76,6 +95,7 @@ export default function RecentsPanel({
   activeId,
   onActivate,
   onRemove,
+  onRemoveMany,
 }: RecentsPanelProps) {
   const [menu, setMenu] = useState<ContextMenuState | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -204,7 +224,7 @@ export default function RecentsPanel({
                   </button>
                   <button
                     type="button"
-                    aria-label={`Remove ${item.name} from recent files`}
+                    aria-label={`Close ${item.name}`}
                     className={removeButton}
                     onClick={() => onRemove(item.id)}
                   >
@@ -219,7 +239,7 @@ export default function RecentsPanel({
 
       {menu !== null && (() => {
         // Look up the right-clicked entry to surface its full path. Untitled
-        // drafts have no path, so they get only the "Remove" action.
+        // drafts have no path, so the path-bound actions are dropped for them.
         const target = items.find((it) => it.id === menu.id) ?? null;
         const targetPath = target?.path ?? null;
         return (
@@ -265,13 +285,70 @@ export default function RecentsPanel({
               autoFocus={!targetPath}
               className={menuItem}
               onClick={() => {
+                const name = target?.name ?? "";
+                setMenu(null);
+                writeText(name).catch((err) => {
+                  console.warn("Failed to copy name:", err);
+                });
+              }}
+            >
+              Copy file name
+            </button>
+            {targetPath && (
+              <button
+                type="button"
+                role="menuitem"
+                className={menuItem}
+                onClick={() => {
+                  const path = targetPath;
+                  setMenu(null);
+                  revealItemInDir(path).catch((err) => {
+                    console.warn("Failed to reveal path:", err);
+                  });
+                }}
+              >
+                Reveal in file manager
+              </button>
+            )}
+            <div className={menuDivider} aria-hidden="true" />
+            <button
+              type="button"
+              role="menuitem"
+              className={menuItem}
+              onClick={() => {
                 const id = menu.id;
                 setMenu(null);
                 onRemove(id);
               }}
             >
-              Remove from list
+              Close
             </button>
+            {closeActions.map(({ scope, label }) => {
+              const ids = idsToClose(items, scope, menu.id);
+              return (
+                <Fragment key={scope}>
+                  {/* Range closes sit apart from the list-wide ones. */}
+                  {scope === "saved" && (
+                    <div className={menuDivider} aria-hidden="true" />
+                  )}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    disabled={ids.length === 0}
+                    className={menuItem}
+                    onClick={() => {
+                      setMenu(null);
+                      onRemoveMany(ids);
+                    }}
+                  >
+                    <span className="flex-1">{label}</span>
+                    <span className="ml-3 tabular-nums text-[color:var(--muted)]">
+                      {ids.length}
+                    </span>
+                  </button>
+                </Fragment>
+              );
+            })}
           </div>
         );
       })()}
