@@ -126,7 +126,13 @@ function separatorNeeded(
   return frame.object ? frame.afterColon : true;
 }
 
-/** Read the caret's surroundings out of the text before it. */
+/** Read the caret's surroundings out of the text before it.
+ *
+ * This runs on every typed character. Measured cost: ~0.5 ms on a 24 KB
+ * document, ~2 ms on 262 KB, ~10 ms on 1.4 MB — dominated by the per-line
+ * lookups, so a pretty-printed file costs more than a minified one of the same
+ * size. Comfortable for the configuration-sized files this exists for; a
+ * multi-megabyte document would want an incremental scan instead. */
 export function analyzeJsonContext(doc: Text, pos: number): JsonContext {
   const frames: Frame[] = [];
   let prev: { char: string; to: number } | null = null;
