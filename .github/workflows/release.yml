@@ -51,14 +51,25 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Look up the release cut by release-please
+        id: release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          id=$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --json databaseId --jq .databaseId 2>/dev/null || true)
+          if [ -z "$id" ]; then
+            echo "::error::no release exists for $GITHUB_REF_NAME - release-please cuts it when the release PR merges"
+            exit 1
+          fi
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
       - name: Build & publish Tauri bundles
-        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2
+        uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'MarkPad ${{ github.ref_name }}'
-          releaseBody: 'See the assets below to download and install this version.'
-          releaseDraft: true
-          prerelease: false
+          releaseId: ${{ steps.release.outputs.id }}
+          uploadUpdaterJson: false
           args: ${{ matrix.args }}
