@@ -32,6 +32,7 @@ import {
 } from "../lib/formatActions";
 import type { DocumentLanguage } from "../lib/documentLanguage";
 import { runJsonAction, type JsonAction } from "../lib/jsonActions";
+import { jsonTypingExtensions } from "../lib/jsonAutoEdit";
 
 export type EditorHandle = {
   getState(): EditorState;
@@ -203,6 +204,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
               ]),
             ),
             keymap.of([...foldKeymap]),
+            jsonTypingExtensions(),
             json(),
             jsonLinter,
             syntaxHighlighting(jsonHighlightStyle),
