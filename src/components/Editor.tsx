@@ -103,7 +103,7 @@ const editorTheme = EditorView.theme({
     backgroundColor: "transparent",
   },
   // The rules below only apply in JSON mode (markdown states include no
-  // gutter, fold, or lint extensions).
+  // fold or lint extensions).
   ".cm-foldGutter .cm-gutterElement": {
     cursor: "pointer",
   },
@@ -230,7 +230,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
             json(),
             jsonLinter,
             syntaxHighlighting(jsonHighlightStyle),
-            lineNumbers(),
             foldGutter(),
           ]
         : [
@@ -259,6 +258,9 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         extensions: [
           history(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
+          // Shared by both languages; listed before perLanguageConf so the
+          // number gutter stays left of JSON's fold gutter.
+          lineNumbers(),
           perLanguageConf.of(languageExtensions(lang)),
           EditorView.lineWrapping,
           editorTheme,
