@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.9.0](https://github.com/lezli01/markpad/compare/v0.8.0...v0.9.0) (2026-08-03)
+
+
+### Features
+
+* add typing comforts for JSON editing ([45e9c12](https://github.com/lezli01/markpad/commit/45e9c1258985d87df18a62850dc72e25ceaf49d7)), closes [#72](https://github.com/lezli01/markpad/issues/72)
+* enable the JSON typing comforts in the editor ([baf16f6](https://github.com/lezli01/markpad/commit/baf16f6434938e465cf894633f917737c81dcea3)), closes [#72](https://github.com/lezli01/markpad/issues/72)
+* typing comforts for JSON editing ([44c0f63](https://github.com/lezli01/markpad/commit/44c0f638c0a0fdcc76c36a88fde659f054c68ac1))
+
+
+### Bug Fixes
+
+* theme the language toggle's drop-down list ([9dfed59](https://github.com/lezli01/markpad/commit/9dfed593f76921bc79bbd5d4d9601506f805f304))
+* theme the language toggle's drop-down list ([b713a02](https://github.com/lezli01/markpad/commit/b713a02a9e4bb069097ed7892ae9d71ad847eb10)), closes [#74](https://github.com/lezli01/markpad/issues/74)
+
 ## [0.8.0](https://github.com/lezli01/markpad/compare/v0.7.1...v0.8.0) (2026-07-21)
 
 
