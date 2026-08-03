@@ -37,8 +37,16 @@ const paneHeader =
 const paneLabel =
   "shrink-0 text-xs font-medium uppercase tracking-wide text-[color:var(--muted)] select-none";
 
+// The drop-down list of a native <select> is painted by the browser, outside our
+// CSS tree, and it takes its surface from the control's own background. A
+// transparent control therefore leaves the open list on the platform's default
+// (light) palette even in the dark theme, so the background is set to the same
+// --bg the pane already shows through it — identical when closed, themed when
+// open — and the options carry the colors explicitly for the same reason.
 const languageSelect =
-  "shrink-0 rounded-md border border-[color:var(--border)] bg-transparent px-1.5 py-1 text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--text)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] transition-colors";
+  "shrink-0 rounded-md border border-[color:var(--border)] bg-[color:var(--bg)] px-1.5 py-1 text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--text)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] transition-colors";
+
+const languageOption = "bg-[color:var(--bg)] text-[color:var(--text)]";
 
 export default function Workspace({
   text,
@@ -119,8 +127,12 @@ export default function Workspace({
                 onLanguageChange(e.target.value as DocumentLanguage)
               }
             >
-              <option value="markdown">Markdown</option>
-              <option value="json">JSON</option>
+              <option className={languageOption} value="markdown">
+                Markdown
+              </option>
+              <option className={languageOption} value="json">
+                JSON
+              </option>
             </select>
           </div>
         </div>

@@ -53,3 +53,9 @@ updates:
     commit-message:
       prefix: ci
       include: scope
+    groups:
+      # The init and analyze steps must stay on the same version, so they have
+      # to be bumped by a single pull request.
+      codeql:
+        patterns:
+          - 'github/codeql-action*'
