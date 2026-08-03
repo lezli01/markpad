@@ -112,8 +112,26 @@ describe("value quoting", () => {
     expect(type('{ "a": true|}', "x")).toBe('{ "a": "truex|"}');
   });
 
-  it("leaves a number alone when a letter lands in it", () => {
+  it("lets a number finish unquoted", () => {
     expect(type('{ "a": 12|}', "e")).toBe('{ "a": 12e|}');
+    expect(type('{ "a": 1e|}', "5")).toBe('{ "a": 1e5|}');
+    expect(type('{ "a": 1e|}', "+")).toBe('{ "a": 1e+|}');
+    expect(type('{ "a": 1.|}', "5")).toBe('{ "a": 1.5|}');
+    expect(type('{ "a": -|}', "3")).toBe('{ "a": -3|}');
+  });
+
+  it("quotes retroactively once the word cannot be a number", () => {
+    expect(type('{ "a": 12|}', "a")).toBe('{ "a": "12a|"}');
+    expect(type('{ "a": 1e5|}', "x")).toBe('{ "a": "1e5x|"}');
+    expect(type('{ "a": 0|}', "x")).toBe('{ "a": "0x|"}');
+    expect(type('{ "a": 0|}', "1")).toBe('{ "a": "01|"}');
+    // Dates and version strings: the sign that ends the number starts the word.
+    expect(type('{ "a": 2026|}', "-")).toBe('{ "a": "2026-|"}');
+    expect(type('{ "a": 1.2|}', ".")).toBe('{ "a": "1.2.|"}');
+  });
+
+  it("quotes retroactively in an array element", () => {
+    expect(type("[12|]", "a")).toBe('["12a|"]');
   });
 
   it("quotes an array element", () => {
