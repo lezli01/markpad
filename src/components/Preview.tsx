@@ -6,18 +6,29 @@ import {
   useRef,
 } from "react";
 import { headingSlug, renderMarkdown } from "../lib/markdown";
+import {
+  lineToOffset,
+  normalizeAnchors,
+  offsetToLine,
+  type SyncAnchor,
+} from "../lib/scrollSync";
 
 export type PreviewHandle = {
   getScrollTop(): number;
   setScrollTop(top: number): void;
+  /** Source line shown at the top of the viewport, or null before mount. */
+  getSyncLine(): number | null;
+  scrollToSyncLine(line: number): void;
 };
 
 type PreviewProps = {
   markdown: string;
+  /** Fired on every scroll of the preview, user-driven or programmatic. */
+  onScroll?: () => void;
 };
 
 const Preview = forwardRef<PreviewHandle, PreviewProps>(function Preview(
-  { markdown },
+  { markdown, onScroll },
   ref,
 ) {
   const html = useMemo(() => renderMarkdown(markdown), [markdown]);
@@ -54,6 +65,53 @@ const Preview = forwardRef<PreviewHandle, PreviewProps>(function Preview(
     [],
   );
 
+  const lineCount = useMemo(() => markdown.split("\n").length, [markdown]);
+
+  // Measuring every block costs one getBoundingClientRect per element, and a
+  // scroll event can arrive every frame, so the result is cached until
+  // something that could have moved a block happens: new content, a reflow
+  // (an image finished loading — scrollHeight changes), or a pane resize.
+  const cacheRef = useRef<{
+    html: string;
+    scrollHeight: number;
+    clientWidth: number;
+    anchors: SyncAnchor[];
+  } | null>(null);
+
+  const readAnchors = useCallback((): SyncAnchor[] => {
+    const container = divRef.current;
+    if (!container) return [];
+    const { scrollHeight, clientWidth } = container;
+    const cached = cacheRef.current;
+    if (
+      cached &&
+      cached.html === html &&
+      cached.scrollHeight === scrollHeight &&
+      cached.clientWidth === clientWidth
+    ) {
+      return cached.anchors;
+    }
+
+    // Viewport y of the content's origin (offset 0), which is above the
+    // container's top edge by however far it is scrolled.
+    const originY = container.getBoundingClientRect().top - container.scrollTop;
+    const raw: SyncAnchor[] = [{ line: 1, offset: 0 }];
+    for (const el of container.querySelectorAll<HTMLElement>(
+      "[data-source-line]",
+    )) {
+      const line = Number(el.dataset.sourceLine);
+      if (!Number.isFinite(line)) continue;
+      raw.push({ line, offset: el.getBoundingClientRect().top - originY });
+    }
+    // Tail anchor: one line past the document maps to the end of the content,
+    // so the last block interpolates instead of clamping to its own top.
+    raw.push({ line: lineCount + 1, offset: scrollHeight });
+
+    const anchors = normalizeAnchors(raw);
+    cacheRef.current = { html, scrollHeight, clientWidth, anchors };
+    return anchors;
+  }, [html, lineCount]);
+
   useImperativeHandle(
     ref,
     () => ({
@@ -63,14 +121,25 @@ const Preview = forwardRef<PreviewHandle, PreviewProps>(function Preview(
           divRef.current.scrollTop = top;
         }
       },
+      getSyncLine: () => {
+        const container = divRef.current;
+        if (!container) return null;
+        return offsetToLine(readAnchors(), container.scrollTop);
+      },
+      scrollToSyncLine: (line) => {
+        const container = divRef.current;
+        if (!container) return;
+        container.scrollTop = lineToOffset(readAnchors(), line);
+      },
     }),
-    [],
+    [readAnchors],
   );
 
   if (markdown === "") {
     return (
       <div
         ref={divRef}
+        onScroll={onScroll}
         className="markpad-preview h-full overflow-auto p-4 text-sm italic text-[color:var(--muted)]"
       >
         Preview will appear here.
@@ -82,6 +151,7 @@ const Preview = forwardRef<PreviewHandle, PreviewProps>(function Preview(
     <div
       ref={divRef}
       onClick={handleClick}
+      onScroll={onScroll}
       className="markpad-preview h-full overflow-auto p-4"
       dangerouslySetInnerHTML={{ __html: html }}
     />
