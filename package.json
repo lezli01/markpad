@@ -38,7 +38,7 @@
     "@tauri-apps/plugin-fs": "^2.5.1",
     "@tauri-apps/plugin-opener": "^2",
     "codemirror": "^6.0.2",
-    "dompurify": "^3.4.11",
+    "dompurify": "^3.4.12",
     "markdown-it": "^14.2.0",
     "markdown-it-anchor": "^9.2.0",
     "react": "^19.1.0",
