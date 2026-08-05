@@ -108,6 +108,24 @@ describe("renderMarkdown — sanitization & safe rendering", () => {
     const html = renderMarkdown("see https://example.com now");
     expect(html).toContain('href="https://example.com"');
   });
+
+  it("linkifies a scheme-less host and a bare domain (fuzzy links)", () => {
+    // Regression: markdown-it 15's linkify-it v6 turned fuzzy links off by
+    // default, which silently stopped linking these in the preview.
+    expect(renderMarkdown("visit www.example.com now")).toContain(
+      'href="http://www.example.com"',
+    );
+    expect(renderMarkdown("see example.com/docs now")).toContain(
+      'href="http://example.com/docs"',
+    );
+  });
+
+  it("does not linkify a filename or a decimal number", () => {
+    // Guards the other side of fuzzyLink: it needs a real TLD, so everyday text
+    // must not turn into links.
+    expect(renderMarkdown("open file.txt now")).not.toContain("<a ");
+    expect(renderMarkdown("costs 3.50 today")).not.toContain("<a ");
+  });
 });
 
 describe("in-document anchors — a rendered heading is reachable by a fragment slug", () => {

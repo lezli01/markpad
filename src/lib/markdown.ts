@@ -39,6 +39,14 @@ const md = new MarkdownIt({
   breaks: false,
 });
 
+// markdown-it 15 ships linkify-it v6, which turned fuzzy links OFF by default.
+// Without this, `www.example.com` and bare domains like `example.com/docs` stop
+// being links in the preview — they were linked before, and GitHub's renderer
+// links them too, so keep the pre-15 behaviour. Scheme URLs, `<...>` autolinks
+// and emails are unaffected either way; a TLD is still required, so `file.txt`
+// and `3.50` are not linkified.
+md.linkify.set({ fuzzyLink: true });
+
 // Give every heading a slug `id` so in-document links (a table of contents such
 // as `[Intro](#intro)`) have a target to scroll to. markdown-it-anchor
 // de-duplicates repeated slugs (e.g. a second "Intro" becomes "intro-1").
