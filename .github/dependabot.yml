@@ -24,6 +24,17 @@ updates:
       tauri:
         patterns:
           - '@tauri-apps/*'
+      # Routine dev-tooling churn lands in one pull request instead of one per
+      # package: master requires up-to-date branches, so every extra pull
+      # request costs its own rebase-and-recheck cycle. Majors stay ungrouped —
+      # a group is only as mergeable as its riskiest member. Each dependency
+      # goes to its most specific matching group, so @types/react* stays with
+      # react above and @tauri-apps/cli with tauri.
+      dev-dependencies:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
 
   - package-ecosystem: cargo
     directory: /src-tauri
