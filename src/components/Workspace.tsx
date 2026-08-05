@@ -1,4 +1,4 @@
-import { useState, type Ref } from "react";
+import { useCallback, useRef, useState, type RefObject } from "react";
 import Editor, { type EditorHandle } from "./Editor";
 import Preview, { type PreviewHandle } from "./Preview";
 import FormatToolbar from "./FormatToolbar";
@@ -20,8 +20,9 @@ type WorkspaceProps = {
   onJsonActionResult: (error: string | null) => void;
   onLanguageChange: (language: DocumentLanguage) => void;
   modKey: string;
-  editorRef?: Ref<EditorHandle>;
-  previewRef?: Ref<PreviewHandle>;
+  /** Ref objects (not callback refs): scroll sync reads both handles here. */
+  editorRef?: RefObject<EditorHandle | null>;
+  previewRef?: RefObject<PreviewHandle | null>;
 };
 
 // Flat, edge-to-edge panes (no rounded "island" cards, no gaps). Panes share the
@@ -47,6 +48,8 @@ const languageSelect =
   "shrink-0 rounded-md border border-[color:var(--border)] bg-[color:var(--bg)] px-1.5 py-1 text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--text)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] transition-colors";
 
 const languageOption = "bg-[color:var(--bg)] text-[color:var(--text)]";
+
+type SyncSource = "editor" | "preview";
 
 export default function Workspace({
   text,
@@ -75,6 +78,58 @@ export default function Workspace({
   const editorHidden = !isJson && viewMode === "preview";
   const previewMounted = !isJson && viewMode !== "editor";
   const isSplit = !isJson && viewMode === "split";
+
+  // Scroll sync, split view only — with a single pane there is nothing to
+  // follow.
+  //
+  // Moving one pane makes *that* pane fire its own scroll event, which would
+  // bounce straight back and fight the user. The echo is recognised by value:
+  // the position written to a pane is remembered, and that pane's next scroll
+  // event is ignored if it reports exactly that position.
+  //
+  // Recognising it by time instead (hold a "who is driving" lock, release it
+  // on the next animation frame) does not work. A programmatic scroll queues
+  // its event for the *following* frame's scroll steps, and those run before
+  // that frame's animation-frame callbacks, so the lock is already gone when
+  // the echo lands — the driving pane then gets dragged off by however much
+  // the mapping is not perfectly invertible (~180px in a mixed document).
+  // Waiting an extra frame fixes the ordering but latches the lock forever
+  // whenever frames stop arriving, e.g. while the window is hidden.
+  const echoScrollTop = useRef<Record<SyncSource, number | null>>({
+    editor: null,
+    preview: null,
+  });
+
+  const syncFrom = useCallback(
+    (source: SyncSource) => {
+      const editor = editorRef?.current;
+      const preview = previewRef?.current;
+      if (!isSplit || !editor || !preview) return;
+      const from = source === "editor" ? editor : preview;
+      const to = source === "editor" ? preview : editor;
+      const other: SyncSource = source === "editor" ? "preview" : "editor";
+
+      if (echoScrollTop.current[source] === from.getScrollTop()) {
+        echoScrollTop.current[source] = null; // our own write bouncing back
+        return;
+      }
+      const line = from.getSyncLine();
+      if (line === null) return;
+
+      to.scrollToSyncLine(line);
+      // Read back rather than trusting the requested offset: the browser
+      // clamps at the ends of the scroll range, and the echo will report the
+      // clamped value.
+      echoScrollTop.current[other] = to.getScrollTop();
+    },
+    [isSplit, editorRef, previewRef],
+  );
+
+  const handleEditorScroll = useCallback(() => syncFrom("editor"), [syncFrom]);
+  const handlePreviewScroll = useCallback(
+    () => syncFrom("preview"),
+    [syncFrom],
+  );
 
   const layoutClass = isSplit
     ? "flex flex-col md:flex-row h-full"
@@ -144,6 +199,7 @@ export default function Workspace({
             onChange={onTextChange}
             onActiveFormatsChange={setActiveFormats}
             onJsonActionResult={onJsonActionResult}
+            onScroll={handleEditorScroll}
           />
         </div>
       </section>
@@ -153,7 +209,11 @@ export default function Workspace({
             <span className={paneLabel}>Preview</span>
           </div>
           <div className="flex-1 min-h-0">
-            <Preview ref={previewRef} markdown={text} />
+            <Preview
+              ref={previewRef}
+              markdown={text}
+              onScroll={handlePreviewScroll}
+            />
           </div>
         </section>
       )}

@@ -207,6 +207,7 @@ function App() {
         name: t.name,
         path: t.path,
         modified: isModified(t),
+        unsaved: hasUnsavedWork(t),
       })),
     [items],
   );
@@ -708,23 +709,35 @@ function App() {
     void performSave();
   }
 
-  function removeItemImmediate(id: ItemId) {
-    const wasActive = activeIdRef.current === id;
+  function removeItemsImmediate(ids: ItemId[]) {
+    if (ids.length === 0) return;
+    const doomed = new Set(ids);
+    const activeWasRemoved =
+      activeIdRef.current !== null && doomed.has(activeIdRef.current);
     const displayed = sortItems(itemsRef.current);
-    const idx = displayed.findIndex((t) => t.id === id);
-    const next = itemsRef.current.filter((t) => t.id !== id);
-    editorStatesRef.current.delete(id);
-    pendingSaveRef.current.delete(id);
+    const next = itemsRef.current.filter((t) => !doomed.has(t.id));
+    for (const id of doomed) {
+      editorStatesRef.current.delete(id);
+      pendingSaveRef.current.delete(id);
+    }
     itemsRef.current = next;
     setItems(next);
     setSavingById((prev) => {
       const out = { ...prev };
-      delete out[id];
+      for (const id of doomed) delete out[id];
       return out;
     });
-    if (wasActive) {
-      const neighbor =
-        displayed[idx + 1] ?? displayed[idx - 1] ?? null;
+    if (activeWasRemoved) {
+      // Fall through to the closest survivor in display order: down first, then
+      // up — a batch close can wipe out several neighbours at once.
+      const idx = displayed.findIndex((t) => t.id === activeIdRef.current);
+      let neighbor: RecentItem | null = null;
+      for (let i = idx + 1; i < displayed.length && !neighbor; i++) {
+        if (!doomed.has(displayed[i].id)) neighbor = displayed[i];
+      }
+      for (let i = idx - 1; i >= 0 && !neighbor; i--) {
+        if (!doomed.has(displayed[i].id)) neighbor = displayed[i];
+      }
       const neighborId = neighbor?.id ?? null;
       setActiveId(neighborId);
       activeIdRef.current = neighborId;
@@ -732,7 +745,11 @@ function App() {
         void loadItemFromDisk(neighbor.id);
       }
     }
-    setPendingRemove((prev) => (prev === id ? null : prev));
+    setPendingRemove((prev) => (prev !== null && doomed.has(prev) ? null : prev));
+  }
+
+  function removeItemImmediate(id: ItemId) {
+    removeItemsImmediate([id]);
   }
 
   function handleRemove(id: ItemId) {
@@ -743,6 +760,17 @@ function App() {
       return;
     }
     removeItemImmediate(id);
+  }
+
+  // Bulk close from the recents context menu. The menu already excludes items
+  // with unsaved work; re-checking here keeps that guarantee local to the owner
+  // of the buffers, so no batch can ever drop a draft silently.
+  function handleRemoveMany(ids: ItemId[]) {
+    const safe = ids.filter((id) => {
+      const item = itemsRef.current.find((t) => t.id === id);
+      return item != null && !hasUnsavedWork(item);
+    });
+    removeItemsImmediate(safe);
   }
 
   async function handleConfirmSave() {
@@ -876,6 +904,7 @@ function App() {
               activeId={activeId}
               onActivate={(id) => void activateItem(id)}
               onRemove={handleRemove}
+              onRemoveMany={handleRemoveMany}
             />
           </aside>
           <div

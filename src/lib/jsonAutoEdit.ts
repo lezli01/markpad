@@ -2,6 +2,8 @@
 // closeBrackets(); this module covers what that does not:
 //
 //   • a key or string value gets its quotes as the first character is typed
+//   • a value left bare to become true/false/null or a number is quoted
+//     retroactively once it can no longer be either (`2026-`, `12a`)
 //   • the separating comma appears with the first character of the next member,
 //     never on Enter — so a half-finished document is still valid JSON
 //   • `:` at the end of a key steps out of the quotes and adds ": "
@@ -70,7 +72,14 @@ const DIGIT = /[0-9]/;
 // inserted in front of one of these — never before `}`, `]` or `,`, which is
 // why a trailing comma cannot be produced.
 const VALUE_START = /[-0-9"{[A-Za-z_$]/;
+// What can extend a bare word. Word characters and digits, plus the three signs
+// a number may legally contain — a bare word that stops being a number on one
+// of those (`2026-`, `1.2.`) still wants quoting.
+const TOKEN_CHAR = /[-+.0-9A-Za-z_$]/;
 const LITERALS = ["true", "false", "null"];
+// A JSON number is `-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?`; this matches every
+// prefix of one, so a word it still matches can grow into a valid number.
+const NUMBER_PREFIX = /^-?(0|[1-9][0-9]*)?(\.[0-9]*)?([eE][+-]?[0-9]*)?$/;
 
 // How far ahead to look for an existing colon after a key. Generous: legal JSON
 // may put the colon on the next line.
@@ -79,6 +88,11 @@ const LOOKAHEAD = 200;
 /** Whether `word` could still grow into true/false/null. */
 function isLiteralPrefix(word: string): boolean {
   return LITERALS.some((literal) => literal.startsWith(word));
+}
+
+/** Whether `word` could still grow into a number. */
+function isNumberPrefix(word: string): boolean {
+  return NUMBER_PREFIX.test(word);
 }
 
 /** The text before the caret does not parse far enough to reason about. */
@@ -277,13 +291,19 @@ export function planJsonAutoEdit(
   if (ctx.string) return planInString(doc, pos, input, ctx.string);
 
   if (ctx.tokenStart !== null) {
-    // Mid-word, so the only comfort left is rescuing a value that was left
-    // bare to protect true/false/null and has now stopped looking like one.
-    if (!WORD.test(input) && !DIGIT.test(input)) return null;
+    // Mid-word, so the only comfort left is rescuing a value that was left bare
+    // — because it was becoming true/false/null, or a number — and has now
+    // stopped looking like one.
+    if (!TOKEN_CHAR.test(input)) return null;
     const word = doc.sliceString(ctx.tokenStart, pos);
-    if (!/^[a-z]+$/.test(word)) return null; // numbers stay numbers
-    if (!isLiteralPrefix(word)) return null; // never was a declined literal
-    if (isLiteralPrefix(word + input)) return null; // could still become one
+    // Whichever shape the bare word was heading for decides when it is lost.
+    const grows = isLiteralPrefix(word)
+      ? isLiteralPrefix
+      : isNumberPrefix(word)
+        ? isNumberPrefix
+        : null;
+    if (!grows) return null; // was never either: not this module's word
+    if (grows(word + input)) return null; // could still get there
     return { comma: null, step: { kind: "quote", tokenStart: ctx.tokenStart } };
   }
 

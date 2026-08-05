@@ -156,3 +156,44 @@ describe("in-document anchors — a rendered heading is reachable by a fragment 
     expect(resolves(doc, "#missing")).toBe(false); // no such heading
   });
 });
+
+// The anchors the split-view scroll sync interpolates between (scrollSync.ts).
+describe("renderMarkdown — source line anchors", () => {
+  const linesOf = (markdown: string): number[] => {
+    const container = document.createElement("div");
+    container.innerHTML = renderMarkdown(markdown);
+    return [...container.querySelectorAll("[data-source-line]")].map((el) =>
+      Number((el as HTMLElement).dataset.sourceLine),
+    );
+  };
+
+  it("stamps each top-level block with its 1-based start line", () => {
+    // heading on line 1, paragraph on line 3, fenced block opening on line 5.
+    const lines = linesOf("# Title\n\npara\n\n```\ncode\n```\n");
+    expect(lines).toEqual([1, 3, 5]);
+  });
+
+  it("survives DOMPurify sanitization", () => {
+    expect(renderMarkdown("hello")).toContain('data-source-line="1"');
+  });
+
+  it("stamps nested blocks too, in document order", () => {
+    const lines = linesOf("- one\n- two\n\n> quoted\n");
+    // Anchors must never move backwards: normalizeAnchors relies on the source
+    // order to sort, and a descending line here would mean the reverse mapping
+    // is guessing.
+    expect(lines.length).toBeGreaterThan(2);
+    expect([...lines].sort((a, b) => a - b)).toEqual(lines);
+    expect(lines[0]).toBe(1);
+    expect(lines[lines.length - 1]).toBe(4);
+  });
+
+  it("does not stamp inline content", () => {
+    const container = document.createElement("div");
+    container.innerHTML = renderMarkdown("text with **bold** and `code`");
+    expect(container.querySelectorAll("strong[data-source-line]").length).toBe(
+      0,
+    );
+    expect(container.querySelectorAll("code[data-source-line]").length).toBe(0);
+  });
+});

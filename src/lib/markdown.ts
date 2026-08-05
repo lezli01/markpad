@@ -52,9 +52,32 @@ md.linkify.set({ fuzzyLink: true });
 // de-duplicates repeated slugs (e.g. a second "Intro" becomes "intro-1").
 md.use(anchor, { slugify: headingSlug });
 
+/**
+ * Stamp every rendered block with the 1-based source line it started on. These
+ * are the anchors the split-view scroll sync interpolates between (see
+ * scrollSync.ts): without them the preview can only be scrolled by pixel ratio,
+ * which drifts wherever the two panes disagree about height.
+ *
+ * Block tokens carry `map` (a [startLine, endLine) pair); inline tokens and
+ * closing tags do not get an attribute, and `hidden` tokens (the implicit
+ * paragraphs of a tight list) render no tag to carry one. A raw `html_block`
+ * also renders its content verbatim and silently drops the attribute — the
+ * surrounding anchors keep the interpolation sane across that gap.
+ */
+md.core.ruler.push("source_line", (state) => {
+  for (const token of state.tokens) {
+    if (token.type === "inline" || token.hidden) continue;
+    if (token.nesting < 0 || !token.map) continue;
+    token.attrSet("data-source-line", String(token.map[0] + 1));
+  }
+});
+
 export function renderMarkdown(source: string): string {
   // Keep the heading `id`s markdown-it-anchor adds; DOMPurify allows `id` by
   // default, but be explicit so a future config change can't silently break
-  // anchor navigation.
-  return DOMPurify.sanitize(md.render(source), { ADD_ATTR: ["id"] });
+  // anchor navigation. `data-source-line` rides on DOMPurify's ALLOW_DATA_ATTR
+  // (on by default) and is listed for the same reason.
+  return DOMPurify.sanitize(md.render(source), {
+    ADD_ATTR: ["id", "data-source-line"],
+  });
 }

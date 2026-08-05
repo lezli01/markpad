@@ -42,6 +42,10 @@ export type EditorHandle = {
   format(action: FormatAction): void;
   runJsonAction(action: JsonAction): void;
   focus(): void;
+  getScrollTop(): number;
+  /** Source line shown at the top of the viewport, or null before mount. */
+  getSyncLine(): number | null;
+  scrollToSyncLine(line: number): void;
 };
 
 type EditorProps = {
@@ -53,7 +57,13 @@ type EditorProps = {
       so the app can clear a previously shown banner. The editor pane has no
       chrome of its own for messages. */
   onJsonActionResult?: (error: string | null) => void;
+  /** Fired on every scroll of the editor, user-driven or programmatic. */
+  onScroll?: () => void;
 };
+
+function clamp01(n: number): number {
+  return Math.min(1, Math.max(0, n));
+}
 
 const editorTheme = EditorView.theme({
   "&": {
@@ -93,7 +103,7 @@ const editorTheme = EditorView.theme({
     backgroundColor: "transparent",
   },
   // The rules below only apply in JSON mode (markdown states include no
-  // gutter, fold, or lint extensions).
+  // fold or lint extensions).
   ".cm-foldGutter .cm-gutterElement": {
     cursor: "pointer",
   },
@@ -141,7 +151,14 @@ const jsonLinter = linter((view) =>
 );
 
 const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
-  { value, language, onChange, onActiveFormatsChange, onJsonActionResult },
+  {
+    value,
+    language,
+    onChange,
+    onActiveFormatsChange,
+    onJsonActionResult,
+    onScroll,
+  },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -149,6 +166,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const onChangeRef = useRef(onChange);
   const onActiveFormatsChangeRef = useRef(onActiveFormatsChange);
   const onJsonActionResultRef = useRef(onJsonActionResult);
+  const onScrollRef = useRef(onScroll);
   const lastActiveKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -162,6 +180,10 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   useEffect(() => {
     onJsonActionResultRef.current = onJsonActionResult;
   }, [onJsonActionResult]);
+
+  useEffect(() => {
+    onScrollRef.current = onScroll;
+  }, [onScroll]);
 
   // Recompute which toggle actions are active at the selection and notify the
   // toolbar, deduped so we don't re-render it on every keystroke that doesn't
@@ -208,7 +230,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
             json(),
             jsonLinter,
             syntaxHighlighting(jsonHighlightStyle),
-            lineNumbers(),
             foldGutter(),
           ]
         : [
@@ -237,6 +258,9 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         extensions: [
           history(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
+          // Shared by both languages; listed before perLanguageConf so the
+          // number gutter stays left of JSON's fold gutter.
+          lineNumbers(),
           perLanguageConf.of(languageExtensions(lang)),
           EditorView.lineWrapping,
           editorTheme,
@@ -281,6 +305,40 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         view.focus();
       },
       focus: () => viewRef.current?.focus(),
+      getScrollTop: () => viewRef.current?.scrollDOM.scrollTop ?? 0,
+      // CodeMirror measures block geometry relative to the document's top,
+      // which moves as the scroller scrolls. `documentTop` is that origin in
+      // viewport coordinates, so subtracting it from the scroller's top edge
+      // gives the document height currently at the top of the viewport —
+      // padding-independent in both directions.
+      getSyncLine: () => {
+        const view = viewRef.current;
+        if (!view) return null;
+        const height =
+          view.scrollDOM.getBoundingClientRect().top - view.documentTop;
+        const block = view.lineBlockAtHeight(height);
+        const line = view.state.doc.lineAt(block.from).number;
+        // Fraction into a (possibly wrapped, multi-row) line, so scrolling
+        // through one long paragraph moves the preview smoothly rather than in
+        // one jump at the paragraph boundary.
+        const within =
+          block.height > 0 ? clamp01((height - block.top) / block.height) : 0;
+        return line + within;
+      },
+      scrollToSyncLine: (line) => {
+        const view = viewRef.current;
+        if (!view) return;
+        const doc = view.state.doc;
+        const number = Math.min(doc.lines, Math.max(1, Math.floor(line)));
+        const within = clamp01(line - number);
+        const block = view.lineBlockAt(doc.line(number).from);
+        const target = block.top + within * block.height;
+        const current =
+          view.scrollDOM.getBoundingClientRect().top - view.documentTop;
+        // Scrolling by d moves documentTop by -d, so the delta lands the target
+        // height exactly at the top edge.
+        view.scrollDOM.scrollTop += target - current;
+      },
     }),
     [emitActiveFormats, dispatchJsonAction],
   );
@@ -295,7 +353,13 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     viewRef.current = view;
     emitActiveFormats(view.state);
 
+    // `scroll` does not bubble, so it is listened for on CodeMirror's own
+    // scroller rather than routed through the view's dom event handlers.
+    const notifyScroll = () => onScrollRef.current?.();
+    view.scrollDOM.addEventListener("scroll", notifyScroll, { passive: true });
+
     return () => {
+      view.scrollDOM.removeEventListener("scroll", notifyScroll);
       view.destroy();
       viewRef.current = null;
     };
