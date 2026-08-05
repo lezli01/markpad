@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.10.0](https://github.com/lezli01/markpad/compare/v0.9.0...v0.10.0) (2026-08-05)
+
+
+### Features
+
+* **editor:** show line numbers for Markdown too ([507ccf1](https://github.com/lezli01/markpad/commit/507ccf1d1800cc2e37d81c0a2a32a9ea93b129fe))
+* **json:** quote a bare value that stops being a number ([0577a2f](https://github.com/lezli01/markpad/commit/0577a2f4c0525a565733290aa62dbafedbd3af41))
+* **preview:** sync editor and preview scrolling in split view ([49b90a1](https://github.com/lezli01/markpad/commit/49b90a1f77e4e5b084e0838983e7dbb07c478486))
+* **recents:** bulk close actions in the context menu ([b3679f5](https://github.com/lezli01/markpad/commit/b3679f51f2a64fe25310c05e174ed0a6fa9497b2))
+* split-view scroll sync, recents bulk close, JSON quoting, Markdown line numbers ([2977d71](https://github.com/lezli01/markpad/commit/2977d71ffa887a1a1b71ac83db2be8b9ee6de6a5))
+
+
+### Bug Fixes
+
+* keep linkifying scheme-less hosts under markdown-it 15 ([4b743ae](https://github.com/lezli01/markpad/commit/4b743ae0fcdbc31480b8fc42356d0bf25acd029b))
+
 ## [0.9.0](https://github.com/lezli01/markpad/compare/v0.8.0...v0.9.0) (2026-08-03)
 
 
