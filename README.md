@@ -69,6 +69,7 @@ side-by-side work:
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/json-dark.png">
   <img src="docs/images/json-light.png" alt="MarkPad editing JSON: the editor fills the window with line numbers and a folded settings object, the pane header offers Format, Minify, Sort keys, Collapse all, and Expand all next to the JSON language toggle, and the view-mode switcher is disabled while the preview steps aside">
 </picture>
+
 - **Recent files sidebar.** A left-hand panel lists up to 50 recently opened items — most-recent first, with modified files pinned to the top and marked. Click one to open it; modified and untitled documents keep their unsaved edits, cursor, and scroll position.
 - **Recents context menu.** Right-click an entry for its full path, Copy full path, Copy file name, Reveal in file manager, and the bulk closes — Close, Close others, Close all above, Close all below, Close all saved, and Close all. Bulk closes skip anything with unsaved edits, so they never open a prompt and never lose a draft; each entry shows how many items it would close and greys out at zero.
 - **Collapsible, resizable sidebar.** Drag the divider to resize the recents panel, or hide it entirely for distraction-free writing with the toolbar toggle or `Ctrl+\`; the width and collapsed state persist.
