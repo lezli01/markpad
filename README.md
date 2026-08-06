@@ -31,7 +31,10 @@
 
 ---
 
-![MarkPad in the dark theme: a recent-files sidebar on the left, a flat single-surface layout, the Markdown formatting toolbar above the editor, sample Markdown in the editor pane, and its live rendering in the preview pane](docs/images/screenshot.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/markdown-dark.png">
+  <img src="docs/images/markdown-light.png" alt="MarkPad editing Markdown: a recent-files sidebar on the left with a modified file marked, the formatting toolbar and language toggle above a line-numbered editor pane, and the live preview rendering the same document on the right">
+</picture>
 
 ## Why MarkPad?
 
@@ -54,12 +57,18 @@ It is released under the [MIT License](LICENSE) and created by `lezli01` at
 Open a `.md` file and MarkPad treats editing and previewing as first-class,
 side-by-side work:
 
-- **Live split-pane preview.** Edit Markdown on the left, see it rendered on the right, with each pane scrolling independently.
+- **Live split-pane preview.** Edit Markdown in a line-numbered editor on the left, see it rendered on the right.
+- **Synced scrolling.** In split view the panes follow each other — scroll either one and the other tracks the same part of the document, staying aligned even across tall images and long code blocks.
 - **In-document link navigation.** Headings get anchor ids, so clicking an in-page link in the preview — like a table of contents `[Section](#section)` — smooth-scrolls to that heading within the preview pane.
 - **Formatting toolbar.** One-click Markdown formatting from the editor header — bold, italic, strikethrough, inline code, headings, bullet/numbered lists, quotes, links, images, code blocks, tables, and horizontal rules — with shortcuts for the common ones (`Ctrl/⌘+B`, `+I`, `+E`, `+K`, and more). Buttons toggle the mark off when reapplied and light up to show the formatting at the cursor.
 - **Three view modes.** Editor-only, preview-only, or side-by-side — switch at any time without losing the editor's content, selection, or undo history.
 - **JSON file support.** Open a `.json` file (or switch any buffer with the pane-header language toggle) for syntax highlighting, live validation, line numbers, and collapse/expand of objects and arrays — plus one-click Format (2-space indent, `Shift+Alt+F`), Minify, and Sort keys. JSON documents are editor-only; the Markdown preview and format toolbar step aside while one is active.
 - **JSON typing comforts.** In a JSON document the editor fills in the punctuation as you type: `{`, `[` and `"` bring their closing partner, typing the closer steps over it, and Backspace between an empty pair removes both. Property names and string values get their quotes from the first character typed — `true`, `false`, `null` and numbers stay bare — and the separating comma appears with the first character of the next member, so a half-finished document is still valid JSON. Typing `:` at the end of a key steps out of the quotes, `}` and `]` re-indent their line, and JSON pasted into an empty buffer is pretty-printed. Every automatic insertion undoes on its own with `Ctrl+Z`.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/json-dark.png">
+  <img src="docs/images/json-light.png" alt="MarkPad editing JSON: the editor fills the window with line numbers and a folded settings object, the pane header offers Format, Minify, Sort keys, Collapse all, and Expand all next to the JSON language toggle, and the view-mode switcher is disabled while the preview steps aside">
+</picture>
 - **Recent files sidebar.** A left-hand panel lists up to 50 recently opened items — most-recent first, with modified files pinned to the top and marked. Click one to open it; modified and untitled documents keep their unsaved edits, cursor, and scroll position.
 - **Recents context menu.** Right-click an entry for its full path, Copy full path, Copy file name, Reveal in file manager, and the bulk closes — Close, Close others, Close all above, Close all below, Close all saved, and Close all. Bulk closes skip anything with unsaved edits, so they never open a prompt and never lose a draft; each entry shows how many items it would close and greys out at zero.
 - **Collapsible, resizable sidebar.** Drag the divider to resize the recents panel, or hide it entirely for distraction-free writing with the toolbar toggle or `Ctrl+\`; the width and collapsed state persist.
