@@ -38,6 +38,9 @@ const ICON_PATHS: Record<FormatAction, string> = {
     '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m4 17 4.5-4.5L12 16l3-3 5 5"/>',
   codeBlock:
     '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m9 10-2 2 2 2"/><path d="m15 10 2 2-2 2"/>',
+  // Two nodes joined by an edge — the flowchart shape of a diagram block.
+  diagram:
+    '<rect x="3" y="4" width="7" height="5" rx="1"/><rect x="14" y="15" width="7" height="5" rx="1"/><path d="M6.5 9v5.5a1.5 1.5 0 0 0 1.5 1.5h3"/>',
   table:
     '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M3 15h18"/><path d="M12 5v14"/>',
   horizontalRule: '<path d="M4 12h16"/>',

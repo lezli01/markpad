@@ -60,7 +60,13 @@ side-by-side work:
 - **Live split-pane preview.** Edit Markdown in a line-numbered editor on the left, see it rendered on the right.
 - **Synced scrolling.** In split view the panes follow each other — scroll either one and the other tracks the same part of the document, staying aligned even across tall images and long code blocks.
 - **In-document link navigation.** Headings get anchor ids, so clicking an in-page link in the preview — like a table of contents `[Section](#section)` — smooth-scrolls to that heading within the preview pane.
-- **Formatting toolbar.** One-click Markdown formatting from the editor header — bold, italic, strikethrough, inline code, headings, bullet/numbered lists, quotes, links, images, code blocks, tables, and horizontal rules — with shortcuts for the common ones (`Ctrl/⌘+B`, `+I`, `+E`, `+K`, and more). Buttons toggle the mark off when reapplied and light up to show the formatting at the cursor.
+- **Diagrams from fenced code.** A ` ```mermaid ` block renders as a diagram in the preview — flowcharts, sequence, class, state, ER, gantt, pie, mindmap, timeline, git graphs and the rest of [Mermaid](https://mermaid.js.org/)'s catalogue — and ` ```dot ` (or `graphviz`, `gv`) renders [Graphviz](https://graphviz.org/) DOT source. Both engines run entirely on your machine, follow the app's light/dark theme, and load only when a document actually has a diagram in it. Source that does not parse shows the engine's message inline with the block, so a half-typed diagram never blanks the preview.
+- **Formatting toolbar.** One-click Markdown formatting from the editor header — bold, italic, strikethrough, inline code, headings, bullet/numbered lists, quotes, links, images, code blocks, diagrams, tables, and horizontal rules — with shortcuts for the common ones (`Ctrl/⌘+B`, `+I`, `+E`, `+K`, and more). Buttons toggle the mark off when reapplied and light up to show the formatting at the cursor.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagram-dark.png">
+  <img src="docs/images/diagram-light.png" alt="MarkPad rendering a diagram: a mermaid flowchart fence in the editor on the left, drawn on the right as a left-to-right graph from Upload API through a Work queue cylinder to a Scanner that branches to Object store, Quarantine, and Audit log">
+</picture>
+
 - **Three view modes.** Editor-only, preview-only, or side-by-side — switch at any time without losing the editor's content, selection, or undo history.
 - **JSON file support.** Open a `.json` file (or switch any buffer with the pane-header language toggle) for syntax highlighting, live validation, line numbers, and collapse/expand of objects and arrays — plus one-click Format (2-space indent, `Shift+Alt+F`), Minify, and Sort keys. JSON documents are editor-only; the Markdown preview and format toolbar step aside while one is active.
 - **JSON typing comforts.** In a JSON document the editor fills in the punctuation as you type: `{`, `[` and `"` bring their closing partner, typing the closer steps over it, and Backspace between an empty pair removes both. Property names and string values get their quotes from the first character typed — `true`, `false`, `null` and numbers stay bare — and the separating comma appears with the first character of the next member, so a half-finished document is still valid JSON. Typing `:` at the end of a key steps out of the quotes, `}` and `]` re-indent their line, and JSON pasted into an empty buffer is pretty-printed. Every automatic insertion undoes on its own with `Ctrl+Z`.
@@ -84,7 +90,7 @@ side-by-side work:
 - **Resumes where you left off.** Your recent-files list and the active document are restored on launch — including unsaved drafts and untitled documents, whose contents are saved locally so edits survive a restart. Files that have been moved or deleted are dropped when reopened.
 - **Persistent preferences.** Theme, view mode, auto-save, and the sidebar's width and collapsed state are remembered between launches, stored locally.
 - **Responsive layout.** Side-by-side on a normal window, stacks vertically at narrow widths.
-- **Safe preview.** Rendered HTML is sanitized with DOMPurify before display.
+- **Safe preview.** Rendered HTML is sanitized with DOMPurify before display — diagram SVG included, since it is generated from the same untrusted document.
 
 ## Built With
 
@@ -93,6 +99,8 @@ side-by-side work:
 - [Vite](https://vitejs.dev/) — dev server and build
 - [CodeMirror 6](https://codemirror.net/) — editor
 - [markdown-it](https://github.com/markdown-it/markdown-it) — Markdown rendering
+- [Mermaid](https://mermaid.js.org/) — diagrams from ` ```mermaid ` blocks
+- [@viz-js/viz](https://github.com/mdaines/viz-js) — Graphviz, compiled to run in the app
 - [DOMPurify](https://github.com/cure53/DOMPurify) — preview sanitization
 - [Tailwind CSS](https://tailwindcss.com/) — styling
 

@@ -38,6 +38,17 @@ between the editor and preview maps positions through source-line anchors
 (`src/lib/scrollSync.ts`) rather than pixel ratios, so tall images and long
 code blocks don't drift.
 
+## Diagrams
+
+A fenced block in a diagram language (`src/lib/diagrams.ts` decides which)
+renders as a placeholder rather than as code, and `<Preview />` fills it in once
+the markdown is in the DOM — the engines measure their labels against real
+layout, and they are megabytes, so they are loaded with a dynamic import the
+first time a document actually uses one. `src/lib/diagramRenderer.ts` owns the
+engines, sanitizes their SVG, and caches results by source, theme and engine so
+typing does not redraw the whole document; `src/lib/diagramMount.ts` owns the
+DOM side. Both mermaid and Graphviz run in-process, keeping the app offline.
+
 ## State Management
 
 Local React state first. Avoid global state libraries until necessary.

@@ -128,6 +128,43 @@ describe("renderMarkdown — sanitization & safe rendering", () => {
   });
 });
 
+describe("renderMarkdown — diagram fences", () => {
+  it("turns a diagram fence into a placeholder instead of a code block", () => {
+    const html = renderMarkdown("```mermaid\nflowchart TB\n  A --> B\n```\n");
+    expect(html).toContain('class="markpad-diagram"');
+    expect(html).toContain('data-diagram-format="mermaid"');
+    expect(html).toContain('data-diagram-state="pending"');
+  });
+
+  it("leaves every other fenced block exactly as it was", () => {
+    // The whole feature has to be invisible to a document without diagrams.
+    expect(renderMarkdown("```ts\nconst a = 1;\n```\n")).toContain(
+      'class="language-ts"',
+    );
+    expect(renderMarkdown("```\nplain\n```\n")).toContain("<pre><code");
+    expect(renderMarkdown("```js\nx\n```\n")).not.toContain("markpad-diagram");
+  });
+
+  it("keeps the diagram source intact through sanitization", () => {
+    const container = document.createElement("div");
+    container.innerHTML = renderMarkdown(
+      "```mermaid\nflowchart LR\n  A -->|maybe| B\n```\n",
+    );
+    // Both directions matter: the arrows are the source's most common token and
+    // the sanitizer is the most likely thing to eat them.
+    expect(
+      container.querySelector(".markpad-diagram-source")?.textContent,
+    ).toBe("flowchart LR\n  A -->|maybe| B\n");
+  });
+
+  it("does not execute markup smuggled through a diagram fence", () => {
+    const html = renderMarkdown(
+      "```mermaid\n<script>alert(1)</script>\n```\n",
+    );
+    expect(html.toLowerCase()).not.toContain("<script");
+  });
+});
+
 describe("in-document anchors — a rendered heading is reachable by a fragment slug", () => {
   // Mirrors Preview.tsx's click handler: resolve a clicked "#fragment" through
   // headingSlug and look for the matching heading id in the rendered HTML. This
@@ -186,6 +223,14 @@ describe("renderMarkdown — source line anchors", () => {
     expect([...lines].sort((a, b) => a - b)).toEqual(lines);
     expect(lines[0]).toBe(1);
     expect(lines[lines.length - 1]).toBe(4);
+  });
+
+  it("stamps a diagram placeholder, so a diagram is a sync landmark too", () => {
+    // The placeholder replaces a <pre>, and scroll sync interpolates between
+    // these anchors — losing the one on a tall diagram would misalign the panes
+    // for the whole rest of the document.
+    const lines = linesOf("# Title\n\n```mermaid\nflowchart TB\n  A --> B\n```\n");
+    expect(lines).toEqual([1, 3]);
   });
 
   it("does not stamp inline content", () => {

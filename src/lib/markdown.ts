@@ -1,6 +1,12 @@
 import MarkdownIt from "markdown-it";
 import anchor from "markdown-it-anchor";
 import DOMPurify from "dompurify";
+import { resolveDiagramFormat } from "./diagrams";
+import {
+  DIAGRAM_CLASS,
+  DIAGRAM_SOURCE_CLASS,
+  DIAGRAM_VIEW_CLASS,
+} from "./diagramMount";
 
 /**
  * Turn heading text into a slug `id`, GitHub-style: lowercase, drop everything
@@ -72,12 +78,55 @@ md.core.ruler.push("source_line", (state) => {
   }
 });
 
+/**
+ * A fenced block in a diagram language becomes a placeholder that <Preview />
+ * fills in asynchronously (see diagramMount.ts): drawing a diagram needs a real
+ * DOM to measure text in, which this pure string pass does not have, and the
+ * engines are megabytes that should not load until a document actually uses one.
+ *
+ * The source is emitted as the text of a `<pre>` inside the placeholder — not as
+ * a data attribute — because DOMPurify strips any attribute whose value contains
+ * `-->`, and that is the most common token in a mermaid diagram. Keeping it in
+ * the DOM (rather than only in the markdown) is what lets the preview redraw a
+ * diagram on a theme change without re-parsing the document.
+ *
+ * Anything that is not a diagram language falls through to markdown-it's own
+ * fence rendering, so ordinary code blocks are untouched.
+ */
+const renderCodeFence = md.renderer.rules.fence;
+md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+  const token = tokens[idx];
+  const format = resolveDiagramFormat(md.utils.unescapeAll(token.info));
+  if (!format || !renderCodeFence) {
+    return renderCodeFence?.(tokens, idx, options, env, self) ?? "";
+  }
+  // The source_line rule above put the anchor on the token; carry it onto the
+  // placeholder so split-view scroll sync still has a landmark here.
+  const line = token.attrGet("data-source-line");
+  const lineAttr =
+    line === null ? "" : ` data-source-line="${md.utils.escapeHtml(String(line))}"`;
+  return (
+    `<div class="${DIAGRAM_CLASS}" data-diagram-format="${format}"` +
+    ` data-diagram-state="pending"${lineAttr}>` +
+    `<div class="${DIAGRAM_VIEW_CLASS}"></div>` +
+    `<pre class="${DIAGRAM_SOURCE_CLASS}"><code>` +
+    md.utils.escapeHtml(token.content) +
+    `</code></pre></div>\n`
+  );
+};
+
 export function renderMarkdown(source: string): string {
   // Keep the heading `id`s markdown-it-anchor adds; DOMPurify allows `id` by
   // default, but be explicit so a future config change can't silently break
   // anchor navigation. `data-source-line` rides on DOMPurify's ALLOW_DATA_ATTR
-  // (on by default) and is listed for the same reason.
+  // (on by default) and is listed for the same reason, as are the diagram
+  // placeholder's attributes.
   return DOMPurify.sanitize(md.render(source), {
-    ADD_ATTR: ["id", "data-source-line"],
+    ADD_ATTR: [
+      "id",
+      "data-source-line",
+      "data-diagram-format",
+      "data-diagram-state",
+    ],
   });
 }

@@ -6,12 +6,14 @@ import JsonToolbar from "./JsonToolbar";
 import type { FormatAction } from "../lib/formatActions";
 import type { JsonAction } from "../lib/jsonActions";
 import type { DocumentLanguage } from "../lib/documentLanguage";
-import type { ViewMode } from "../lib/preferences";
+import type { Theme, ViewMode } from "../lib/preferences";
 
 type WorkspaceProps = {
   text: string;
   language: DocumentLanguage;
   viewMode: ViewMode;
+  /** Passed through to the preview, which draws diagrams in the theme's colours. */
+  theme: Theme;
   onTextChange: (next: string) => void;
   onFormat: (id: FormatAction) => void;
   onJsonAction: (id: JsonAction) => void;
@@ -55,6 +57,7 @@ export default function Workspace({
   text,
   language,
   viewMode,
+  theme,
   onTextChange,
   onFormat,
   onJsonAction,
@@ -212,6 +215,7 @@ export default function Workspace({
             <Preview
               ref={previewRef}
               markdown={text}
+              theme={theme}
               onScroll={handlePreviewScroll}
             />
           </div>
