@@ -2,10 +2,18 @@ import {
   forwardRef,
   useCallback,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
 } from "react";
 import { headingSlug, renderMarkdown } from "../lib/markdown";
+import {
+  findDiagramSlots,
+  paintDiagram,
+  type DiagramSlot,
+} from "../lib/diagramMount";
+import { peekDiagram, renderDiagram } from "../lib/diagramRenderer";
+import type { Theme } from "../lib/preferences";
 import {
   lineToOffset,
   normalizeAnchors,
@@ -23,12 +31,20 @@ export type PreviewHandle = {
 
 type PreviewProps = {
   markdown: string;
+  /** Drives the colours of rendered diagrams; the rest of the pane uses CSS. */
+  theme: Theme;
   /** Fired on every scroll of the preview, user-driven or programmatic. */
   onScroll?: () => void;
 };
 
+// Diagram source is usually mid-edit, and every intermediate state would be
+// rendered and thrown away, so a brand-new diagram waits this long for the
+// typing to settle. Long enough to skip the noise, short enough that finishing a
+// diagram feels immediate.
+const NEW_DIAGRAM_DELAY_MS = 180;
+
 const Preview = forwardRef<PreviewHandle, PreviewProps>(function Preview(
-  { markdown, onScroll },
+  { markdown, theme, onScroll },
   ref,
 ) {
   const html = useMemo(() => renderMarkdown(markdown), [markdown]);
@@ -64,6 +80,57 @@ const Preview = forwardRef<PreviewHandle, PreviewProps>(function Preview(
     },
     [],
   );
+
+  // Draw every diagram in the pane that has already been rendered, and report
+  // back the ones that still need an engine. Reading the DOM afresh each time is
+  // what makes this safe to call after an await: React rebuilds this pane's
+  // children whenever the markdown changes (and once more on mount under
+  // StrictMode), so an element captured earlier may no longer be the one on
+  // screen. Painting only from the cache keeps it cheap enough to repeat.
+  const drawRenderedDiagrams = useCallback(
+    (container: HTMLElement, forTheme: Theme): DiagramSlot[] => {
+      const missing: DiagramSlot[] = [];
+      for (const slot of findDiagramSlots(container, forTheme)) {
+        const cached = peekDiagram(slot.format, forTheme, slot.source);
+        if (cached) {
+          paintDiagram(slot, forTheme, cached);
+        } else {
+          missing.push(slot);
+        }
+      }
+      return missing;
+    },
+    [],
+  );
+
+  // Diagrams are drawn once the markdown is in the DOM, because the engines
+  // measure their labels against the real layout — and they are megabytes, so
+  // they load only when a document actually contains a diagram.
+  //
+  // Every keystroke rebuilds this pane's HTML, which throws away the SVG of
+  // every diagram in the document. Redrawing an unchanged one from the cache
+  // therefore happens here, synchronously and before the browser paints, so
+  // editing prose next to a diagram cannot make it blink. Only source that has
+  // never been rendered takes the slow path.
+  useLayoutEffect(() => {
+    const container = divRef.current;
+    if (!container) return;
+    const missing = drawRenderedDiagrams(container, theme);
+    if (missing.length === 0) return;
+
+    const timer = window.setTimeout(() => {
+      for (const slot of missing) {
+        void renderDiagram(slot.format, theme, slot.source).then(() => {
+          // The result is in the cache now; draw whatever the pane currently
+          // holds. Anything the user has since edited away is simply not there
+          // to draw, and its own pass will pick it up.
+          const live = divRef.current;
+          if (live) drawRenderedDiagrams(live, theme);
+        });
+      }
+    }, NEW_DIAGRAM_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [html, theme, drawRenderedDiagrams]);
 
   const lineCount = useMemo(() => markdown.split("\n").length, [markdown]);
 

@@ -172,6 +172,35 @@ describe("insert commands — code block, table, horizontal rule", () => {
   });
 });
 
+describe("insert commands — diagram", () => {
+  it("inserts a mermaid starter and puts the caret on its first line", () => {
+    const view = viewFrom("|");
+    runFormatAction("diagram", view);
+    const doc = view.state.doc.toString();
+    const caret = view.state.selection.main.head;
+    expect(doc).toBe(
+      "```mermaid\nflowchart LR\n    A[Start] --> B{Ready?}\n" +
+        "    B -->|yes| C[Ship it]\n    B -->|no| A\n```\n",
+    );
+    // Directly after the opening fence, on the "flowchart LR" line.
+    expect(view.state.doc.lineAt(caret).number).toBe(2);
+    expect(caret).toBe("```mermaid\n".length);
+    view.destroy();
+  });
+
+  it("wraps a selection as diagram source", () => {
+    expect(runDoc("[graph TD; a-->b]", "diagram")).toBe(
+      "```mermaid\ngraph TD; a-->b\n```\n",
+    );
+  });
+
+  it("breaks onto a new line when not at the start of a line", () => {
+    expect(runDoc("text|", "diagram").startsWith("text\n```mermaid\n")).toBe(
+      true,
+    );
+  });
+});
+
 describe("format action registry", () => {
   it("has unique action ids", () => {
     const ids = FORMAT_ACTIONS.map((a) => a.id);

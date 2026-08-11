@@ -945,6 +945,7 @@ function App() {
               text={activeText}
               language={activeLanguage}
               viewMode={viewMode}
+              theme={theme}
               onTextChange={updateActiveItemText}
               onFormat={(id) => editorRef.current?.format(id)}
               onJsonAction={(id) => editorRef.current?.runJsonAction(id)}

@@ -33,6 +33,7 @@ export type FormatAction =
   | "link"
   | "image"
   | "codeBlock"
+  | "diagram"
   | "table"
   | "horizontalRule";
 
@@ -615,6 +616,46 @@ const insertCodeBlock: MarkdownCommand = (view) => {
   return true;
 };
 
+// A diagram fence is just a code fence with a language the preview knows how to
+// draw (see lib/diagrams.ts). Mermaid is the tag to reach for by default — it is
+// what GitHub, GitLab and VS Code render — so the starter is a small flowchart
+// rather than an empty fence nobody can guess the syntax of.
+const DIAGRAM_STARTER = [
+  "```mermaid",
+  "flowchart LR",
+  "    A[Start] --> B{Ready?}",
+  "    B -->|yes| C[Ship it]",
+  "    B -->|no| A",
+  "```",
+  "",
+].join("\n");
+
+const insertDiagram: MarkdownCommand = (view) => {
+  const { state } = view;
+  const tr = state.changeByRange((range) => {
+    const sel = state.sliceDoc(range.from, range.to);
+    const pre = atLineStart(state, range.from) ? "" : "\n";
+    // A selection is treated as diagram source to wrap — paste mermaid from a
+    // design doc, select it, click the button.
+    if (sel) {
+      const insert = pre + "```mermaid\n" + sel + "\n```\n";
+      return {
+        changes: { from: range.from, to: range.to, insert },
+        range: EditorSelection.cursor(range.from + insert.length),
+      };
+    }
+    const insert = pre + DIAGRAM_STARTER;
+    // Caret on the diagram's first line, ready to replace the starter body.
+    const caret = range.from + pre.length + 11; // past "```mermaid\n"
+    return {
+      changes: { from: range.from, insert },
+      range: EditorSelection.cursor(caret),
+    };
+  });
+  view.dispatch({ ...tr, scrollIntoView: true });
+  return true;
+};
+
 const insertTable: MarkdownCommand = (view) => {
   const { state } = view;
   const tr = state.changeByRange((range) => {
@@ -763,6 +804,13 @@ export const FORMAT_ACTIONS: readonly FormatActionDef[] = [
     shortcut: "Mod-Shift-c",
     toggle: false,
     run: insertCodeBlock,
+  },
+  {
+    id: "diagram",
+    label: "Diagram",
+    group: "insert",
+    toggle: false,
+    run: insertDiagram,
   },
   {
     id: "table",

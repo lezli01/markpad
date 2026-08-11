@@ -223,3 +223,59 @@ body {
   max-width: 100%;
   height: auto;
 }
+
+/* Rendered diagrams (```mermaid / ```dot blocks — see lib/diagramMount.ts).
+   The placeholder holds two children: the view the SVG is drawn into, and the
+   verbatim source, which stays in the DOM so a diagram can be redrawn on a
+   theme change and is shown only when the engine rejected it. */
+.markpad-diagram {
+  margin: 1rem 0;
+}
+
+.markpad-diagram-view {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+}
+
+/* Engines emit a pt-sized root plus a viewBox, so capping the width and letting
+   the height follow scales a wide diagram down to the pane instead of clipping
+   it. */
+.markpad-diagram-view svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Nothing has been drawn yet: hold open a line of space so the diagram's
+   arrival does not shove the rest of the document down. */
+.markpad-diagram[data-diagram-state="pending"] .markpad-diagram-view::before {
+  content: "Rendering diagram…";
+  font-size: 0.85em;
+  font-style: italic;
+  color: var(--muted);
+}
+
+.markpad-diagram-source {
+  display: none;
+}
+
+.markpad-diagram[data-diagram-state="error"] .markpad-diagram-source {
+  display: block;
+}
+
+.markpad-diagram[data-diagram-state="error"] .markpad-diagram-view {
+  display: block;
+}
+
+/* Same amber wash <ErrorBanner /> uses, so a diagram that would not parse reads
+   as the same kind of "look at this" as a failed JSON action. */
+.markpad-diagram-message {
+  margin: 0 0 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-left: 2px solid #f59e0b; /* amber-500 */
+  border-radius: 0.25rem;
+  background: rgb(245 158 11 / 0.1);
+  font-size: 0.85em;
+  white-space: pre-wrap;
+  color: var(--text);
+}
