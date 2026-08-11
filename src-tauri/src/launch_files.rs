@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
+use serde::Serialize;
 use serde_json::json;
 use tauri::{Emitter, Manager};
 
@@ -55,6 +56,42 @@ pub async fn read_text_file_by_path(path: String) -> Result<String, String> {
 #[tauri::command]
 pub async fn write_text_file_by_path(path: String, content: String) -> Result<(), String> {
     std::fs::write(&path, content).map_err(|err| err.to_string())
+}
+
+/// A cheap "was this file rewritten?" stamp: modification time in milliseconds
+/// since the Unix epoch, plus the byte length.
+///
+/// Coarse on purpose. A stamp match is only ever used to skip a read; anything
+/// that moved the stamp is confirmed against the file's actual bytes on the TS
+/// side (see lib/externalChange.ts), so a low-resolution mtime or a same-length
+/// rewrite costs one extra read rather than a wrong answer.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileStamp {
+    pub mtime_ms: Option<i64>,
+    pub size: u64,
+}
+
+/// Stamp the file at `path`, or `None` when it no longer exists — a deletion is
+/// a normal outcome here (the file was renamed away or removed behind our back),
+/// not an error, so the frontend can report it as such. Every other io error is
+/// still an error.
+#[tauri::command]
+pub async fn stat_text_file_by_path(path: String) -> Result<Option<FileStamp>, String> {
+    let meta = match std::fs::metadata(&path) {
+        Ok(meta) => meta,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(err) => return Err(err.to_string()),
+    };
+    let mtime_ms = meta
+        .modified()
+        .ok()
+        .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|since| since.as_millis() as i64);
+    Ok(Some(FileStamp {
+        mtime_ms,
+        size: meta.len(),
+    }))
 }
 
 pub fn bring_to_front(app: &tauri::AppHandle) {
