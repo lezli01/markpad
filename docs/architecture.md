@@ -20,6 +20,18 @@ application-data directory. User preferences (theme, view mode, auto-save,
 sidebar width/collapsed state) live in `localStorage` behind the single
 chokepoint `src/lib/preferences.ts`.
 
+## Outside Edits
+
+Buffers live in memory, so a file rewritten by another program has to be noticed
+before a save overwrites it. There is no filesystem watcher — that would mean a
+new dependency and a per-platform backend for a workflow that is entirely "the
+user comes back to MarkPad" — so the check is driven by window focus and by
+activating a recents entry. `src/lib/externalChange.ts` holds the policy: stat the
+path (`stat_text_file_by_path`), and only when the stamp moved, read it and
+compare the bytes with what the buffer believes is on disk. Comparing content is
+what keeps a touch, a same-bytes save, and MarkPad's own writes from raising a
+false notice.
+
 ## Editor
 
 CodeMirror 6 provides the editing surface for every language, with line numbers

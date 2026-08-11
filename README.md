@@ -95,6 +95,7 @@ side-by-side work:
 - **Save back to disk.** Manual Save plus a visible modified indicator in the recents list so you always know whether your edits are on disk.
 - **Optional auto-save.** Tick the box once and edits land on disk shortly after you stop typing, while a file is open.
 - **Unsaved-change guard.** Closing an item only drops it from the recents list; the file on disk is untouched. Closing one that has unsaved edits prompts to Save, Discard, or Cancel so reflex clicks don't lose work.
+- **Notices outside edits.** Change an open file in another program and MarkPad tells you when you come back to the window, offering **Reload from disk** or **Keep my version**; other open files that changed are marked in the recents list. A file merely touched, or saved with the same content, says nothing. Auto-save pauses until you answer, so it can never overwrite the other program's work behind your back, and a file deleted out from under you says so rather than offering a reload — your copy stays open, and saving writes the file again.
 - **Resumes where you left off.** Your recent-files list and the active document are restored on launch — including unsaved drafts and untitled documents, whose contents are saved locally so edits survive a restart. Files that have been moved or deleted are dropped when reopened.
 - **Persistent preferences.** Theme, view mode, auto-save, and the sidebar's width and collapsed state are remembered between launches, stored locally.
 - **Responsive layout.** Side-by-side on a normal window, stacks vertically at narrow widths.
@@ -177,7 +178,8 @@ application-data directory; nothing is sent over the network.
 Early development, but already usable day-to-day. The split-pane workspace, the
 recent-files sidebar with draft persistence, file open/save, view modes, theming,
 auto-save, JSON and YAML editing with formatting and folding, OS file-association
-handling, single-instance routing, and session restore are working today. Specs for shipped and in-progress features live under
+handling, single-instance routing, outside-edit detection, and session restore are
+working today. Specs for shipped and in-progress features live under
 [`specs/`](specs); open issues and follow-ups are in the
 [issue tracker](https://github.com/lezli01/markpad/issues).
 
