@@ -27,6 +27,7 @@ pub fn run() {
             launch_files::get_pending_files,
             launch_files::read_text_file_by_path,
             launch_files::write_text_file_by_path,
+            launch_files::stat_text_file_by_path,
             session::load_session,
             session::save_session
         ])

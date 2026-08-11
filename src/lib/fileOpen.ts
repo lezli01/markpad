@@ -7,6 +7,9 @@
 //   - src/lib/session.ts        owns load_session / save_session
 //   - src/lib/launchFiles.ts    owns get_pending_files + markpad://open-files event
 //
+// statTextFile and subscribeToAppFocus are the two primitives external-change
+// detection needs; the policy that uses them lives in src/lib/externalChange.ts.
+//
 // Note: openTextFileByPath reads via the Rust `read_text_file_by_path`
 // command rather than the fs plugin's readTextFile because programmatic paths
 // (CLI args, OS file activations, session restore) don't get the fs plugin's
@@ -38,6 +41,14 @@ const SAVE_FILTERS: Record<
 export type OpenResult =
   | { kind: "ok"; name: string; path: string; content: string }
   | { kind: "cancelled" }
+  | { kind: "error"; message: string };
+
+/** Cheap change stamp for a file on disk; see FileStamp in launch_files.rs. */
+export type DiskStamp = { mtimeMs: number | null; size: number };
+
+export type StatResult =
+  | { kind: "ok"; stamp: DiskStamp }
+  | { kind: "missing" }
   | { kind: "error"; message: string };
 
 export type SaveResult = { kind: "ok" } | { kind: "error"; message: string };
@@ -106,6 +117,43 @@ export async function openTextFileByPath(path: string): Promise<OpenResult> {
     };
   } catch (err) {
     console.warn("Failed to read file by path:", err);
+    return { kind: "error", message: friendlyMessage(err) };
+  }
+}
+
+/**
+ * Read a file and stamp it in one go, for the callers that want a baseline to
+ * compare against later (see lib/externalChange.ts).
+ *
+ * The stamp is taken FIRST, on purpose: a write landing between the two calls
+ * then leaves a stamp that looks older than the content it labels, which costs
+ * one redundant read on the next check. Stamping afterwards would leave one that
+ * looks current for content we never saw, hiding that change for good.
+ *
+ * `stamp` is null when only the stat failed — an unknown baseline is safe, it
+ * just means the next check reads instead of trusting the stamp.
+ */
+export async function openTextFileByPathWithStamp(
+  path: string,
+): Promise<{ result: OpenResult; stamp: DiskStamp | null }> {
+  const stat = await statTextFile(path);
+  const result = await openTextFileByPath(path);
+  return { result, stamp: stat.kind === "ok" ? stat.stamp : null };
+}
+
+/**
+ * Stamp a file without reading it, so an open document can be checked against
+ * disk cheaply. A path that no longer exists reports `missing` rather than an
+ * error — see lib/externalChange.ts for what the caller does with each outcome.
+ */
+export async function statTextFile(path: string): Promise<StatResult> {
+  try {
+    const stamp = await invoke<DiskStamp | null>("stat_text_file_by_path", {
+      path,
+    });
+    return stamp === null ? { kind: "missing" } : { kind: "ok", stamp };
+  } catch (err) {
+    console.warn("Failed to stat file:", err);
     return { kind: "error", message: friendlyMessage(err) };
   }
 }
@@ -191,6 +239,40 @@ export async function saveTextFileAs(
     console.warn("Failed to save file:", err);
     return { kind: "error", message: friendlyMessage(err) };
   }
+}
+
+/**
+ * Fire `handler` whenever the user comes back to markpad from somewhere else.
+ * This is the trigger for the external-change sweep (see lib/externalChange.ts):
+ * the window regaining focus is the moment the file they just edited elsewhere
+ * could have changed.
+ *
+ * Two sources, because neither alone is dependable across platforms: Tauri's own
+ * `tauri://focus`, which reports OS window focus, and the webview's DOM `focus`,
+ * which covers a webview that takes focus without the window event firing.
+ * Duplicate fires are expected and harmless — the sweep coalesces them.
+ */
+export async function subscribeToAppFocus(
+  handler: () => void,
+): Promise<() => void> {
+  const onDomFocus = () => handler();
+  window.addEventListener("focus", onDomFocus);
+
+  let unlistenTauri: (() => void) | null = null;
+  try {
+    unlistenTauri = await getCurrentWebviewWindow().onFocusChanged(
+      ({ payload: focused }) => {
+        if (focused) handler();
+      },
+    );
+  } catch (err) {
+    console.warn("Failed to subscribe to window focus:", err);
+  }
+
+  return () => {
+    window.removeEventListener("focus", onDomFocus);
+    unlistenTauri?.();
+  };
 }
 
 export async function setWindowTitle(fileName: string | null): Promise<void> {

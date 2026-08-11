@@ -14,6 +14,10 @@ export type RecentEntry = {
   /** True when the buffer differs from its saved baseline. Unlike `modified`,
       an untouched untitled draft counts as saved, so bulk closes may take it. */
   unsaved: boolean;
+  /** True when the file was changed or removed on disk by something else and the
+      user has not dealt with it yet — shows a marker on the row. The banner with
+      the actual choice appears once the item is active. */
+  externallyChanged: boolean;
 };
 
 type RecentsPanelProps = {
@@ -84,6 +88,28 @@ function CloseIcon() {
       strokeLinejoin="round"
     >
       <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  );
+}
+
+// Marks a row whose file changed on disk. Kept visually distinct from the
+// modified dot on the left — that one is about the buffer, this one is about the
+// file — and never hidden on hover, unlike the close button it sits beside.
+function DiskChangeIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width="13"
+      height="13"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      <path d="M21 3v5h-5" />
     </svg>
   );
 }
@@ -203,6 +229,9 @@ export default function RecentsPanel({
                         {item.modified && (
                           <span className="sr-only">Modified. </span>
                         )}
+                        {item.externallyChanged && (
+                          <span className="sr-only">Changed on disk. </span>
+                        )}
                         {item.name}
                       </span>
                       {item.path && (
@@ -222,6 +251,17 @@ export default function RecentsPanel({
                       )}
                     </span>
                   </button>
+                  {item.externallyChanged && (
+                    <span
+                      // The row's own accessible name already carries this (see
+                      // the sr-only text above), so the glyph is decorative;
+                      // the tooltip is for sighted users.
+                      title="Changed on disk"
+                      className="shrink-0 inline-flex items-center justify-center p-0.5 text-[color:var(--accent)]"
+                    >
+                      <DiskChangeIcon />
+                    </span>
+                  )}
                   <button
                     type="button"
                     aria-label={`Close ${item.name}`}
