@@ -2,8 +2,8 @@ import type { Theme, ViewMode } from "../lib/preferences";
 
 type ToolbarProps = {
   viewMode: ViewMode;
-  /** False while a JSON document is active — JSON is editor-only, so the
-      Editor/Split/Preview segments are disabled (the preference is kept). */
+  /** False while a data document is active — JSON and YAML are editor-only, so
+      the Editor/Split/Preview segments are disabled (the preference is kept). */
   viewModesEnabled: boolean;
   theme: Theme;
   saveEnabled: boolean;
@@ -245,7 +245,7 @@ export default function Toolbar({
               title={
                 viewModesEnabled
                   ? undefined
-                  : "View modes are unavailable for JSON documents"
+                  : "View modes are unavailable for JSON and YAML documents"
               }
               onClick={() => onSetViewMode(mode)}
             >
