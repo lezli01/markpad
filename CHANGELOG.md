@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.11.0](https://github.com/lezli01/markpad/compare/v0.10.0...v0.11.0) (2026-08-11)
+
+
+### Features
+
+* add YAML as a third document language ([83f7805](https://github.com/lezli01/markpad/commit/83f7805208c506f3dde639439bd0f1ee3deb12e0))
+* add YAML as a third document language ([f29a987](https://github.com/lezli01/markpad/commit/f29a987bf23fa5023cc2db54854dfcb4312ccfee)), closes [#106](https://github.com/lezli01/markpad/issues/106)
+* detect when an open file changes on disk ([8193556](https://github.com/lezli01/markpad/commit/819355687d8d2de03fb8677cdd9d2fc28305ed68)), closes [#108](https://github.com/lezli01/markpad/issues/108)
+* notify when an open file changes on disk, with a reload option ([fc15675](https://github.com/lezli01/markpad/commit/fc15675e817f3230790cd562baf9131cd072abce))
+* offer a reload when a file has changed on disk ([f489298](https://github.com/lezli01/markpad/commit/f4892982882612e933af5d5ba1a8b650a752ddbf)), closes [#108](https://github.com/lezli01/markpad/issues/108)
+* render diagrams from fenced code blocks ([3d1ab45](https://github.com/lezli01/markpad/commit/3d1ab45af36935a549ce569dc3ed9ae92db043ae))
+* render diagrams from fenced code blocks ([5e8fcb7](https://github.com/lezli01/markpad/commit/5e8fcb7aab1a40c14a3d7fc96ea4e794794abd11)), closes [#103](https://github.com/lezli01/markpad/issues/103)
+
+
+### Bug Fixes
+
+* say YAML too in the disabled view-mode tooltip ([d33107b](https://github.com/lezli01/markpad/commit/d33107be6e784f9972d38f50c65faad0ff73607a))
+
 ## [0.10.0](https://github.com/lezli01/markpad/compare/v0.9.0...v0.10.0) (2026-08-05)
 
 
