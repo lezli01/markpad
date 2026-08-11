@@ -9,6 +9,7 @@ import type { EditorState, StateEffect } from "@codemirror/state";
 import Workspace from "./components/Workspace";
 import Toolbar from "./components/Toolbar";
 import ErrorBanner from "./components/ErrorBanner";
+import ExternalChangeBanner from "./components/ExternalChangeBanner";
 import RecentsPanel, { type RecentEntry } from "./components/RecentsPanel";
 import ConfirmDialog from "./components/ConfirmDialog";
 import type { EditorHandle } from "./components/Editor";
@@ -16,10 +17,21 @@ import type { PreviewHandle } from "./components/Preview";
 import {
   openTextFile,
   openTextFileByPath,
+  openTextFileByPathWithStamp,
   saveTextFile,
   saveTextFileAs,
   setWindowTitle,
+  statTextFile,
+  subscribeToAppFocus,
 } from "./lib/fileOpen";
+import {
+  acknowledgedBaseline,
+  checkForExternalChange,
+  needsDiskCheck,
+  outcomeStillApplies,
+  type DiskBaseline,
+  type ExternalChange,
+} from "./lib/externalChange";
 import { getPendingFiles, subscribeToOpenFiles } from "./lib/launchFiles";
 import { loadSession, saveSession, type SessionItem } from "./lib/session";
 import {
@@ -67,6 +79,13 @@ export type RecentItem = {
       from the path" (see resolveLanguage). Cleared on Save-As, where the
       chosen extension becomes authoritative. */
   languageOverride: DocumentLanguage | null;
+  /** The disk revision this buffer has been reconciled against, for spotting
+      outside edits (see lib/externalChange.ts). Only meaningful while `loaded`. */
+  diskBaseline: DiskBaseline;
+  /** An outside edit to this file that the user has not answered yet; null when
+      there is none. Files whose buffer was released never carry one — they are
+      re-read from disk on activation. */
+  external: ExternalChange | null;
 };
 
 type ItemSnapshot = {
@@ -182,6 +201,9 @@ function App() {
   const sidebarWidthRef = useRef<number>(sidebarWidth);
   const activationSeqRef = useRef(0);
   const activeCounterRef = useRef(1);
+  // Guards the external-change sweep: focus events arrive in bursts (and from two
+  // sources), and one pass at a time is enough.
+  const sweepingRef = useRef(false);
 
   useEffect(() => {
     itemsRef.current = items;
@@ -210,6 +232,7 @@ function App() {
         path: t.path,
         modified: isModified(t),
         unsaved: hasUnsavedWork(t),
+        externallyChanged: t.external !== null,
       })),
     [items],
   );
@@ -253,7 +276,17 @@ function App() {
       setItems((list) =>
         list.map((t) =>
           t.id === prevId
-            ? { ...t, loaded: false, text: "", savedText: "" }
+            ? {
+                ...t,
+                loaded: false,
+                text: "",
+                savedText: "",
+                // No buffer left to compare against, so any disk bookkeeping is
+                // meaningless — and a leftover flag would show a marker for a
+                // file that will simply be re-read on its next activation.
+                diskBaseline: null,
+                external: null,
+              }
             : t,
         ),
       );
@@ -264,7 +297,7 @@ function App() {
     const item = itemsRef.current.find((t) => t.id === id);
     if (!item || item.kind !== "file" || !item.path) return;
     const seq = ++activationSeqRef.current;
-    const result = await openTextFileByPath(item.path);
+    const { result, stamp } = await openTextFileByPathWithStamp(item.path);
     if (seq !== activationSeqRef.current) return;
     if (result.kind === "ok") {
       setItems((list) =>
@@ -276,6 +309,8 @@ function App() {
                 text: result.content,
                 savedText: result.content,
                 name: result.name,
+                diskBaseline: stamp,
+                external: null,
               }
             : t,
         ),
@@ -287,6 +322,95 @@ function App() {
           : "This file could not be opened.",
       );
       removeItemImmediate(id);
+    }
+  }
+
+  /**
+   * Take the disk version of a file the user was told had changed underneath
+   * them. Replaces the buffer wholesale — the Editor rebuilds its state for a new
+   * document, so undo history starts fresh rather than being able to pull the
+   * pre-reload text back over content it never belonged to.
+   */
+  async function reloadItemFromDisk(id: ItemId): Promise<void> {
+    const item = itemsRef.current.find((t) => t.id === id);
+    if (!item || item.kind !== "file" || !item.path) return;
+    const seq = ++activationSeqRef.current;
+    const { result, stamp } = await openTextFileByPathWithStamp(item.path);
+    if (seq !== activationSeqRef.current) return;
+    if (result.kind !== "ok") {
+      // Unlike a lazy activation load, a failed reload must NOT drop the item:
+      // its buffer can hold the only copy of the user's work. Report it and leave
+      // the notice up so they can retry or keep their version.
+      setError(
+        result.kind === "error"
+          ? result.message
+          : "This file could not be reloaded.",
+      );
+      return;
+    }
+    setItems((list) =>
+      list.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              loaded: true,
+              text: result.content,
+              savedText: result.content,
+              name: result.name,
+              diskBaseline: stamp,
+              external: null,
+            }
+          : t,
+      ),
+    );
+    setError(null);
+  }
+
+  /** Stop showing a notice without taking the disk version: remember the revision
+      the user was shown, so the same one never interrupts them twice. */
+  function acknowledgeExternalChange(id: ItemId) {
+    const item = itemsRef.current.find((t) => t.id === id);
+    if (!item || item.external === null) return;
+    const baseline = acknowledgedBaseline(item.external);
+    setItems((list) =>
+      list.map((t) =>
+        t.id === id ? { ...t, external: null, diskBaseline: baseline } : t,
+      ),
+    );
+  }
+
+  /**
+   * Compare every buffer we hold against its file on disk. Runs when the window
+   * regains focus and when an item is activated — see lib/externalChange.ts for
+   * why those two moments, and for the stat-then-read protocol.
+   */
+  async function checkOpenFilesAgainstDisk(): Promise<void> {
+    if (sweepingRef.current) return;
+    sweepingRef.current = true;
+    try {
+      const targets = itemsRef.current.filter(needsDiskCheck);
+      for (const item of targets) {
+        const outcome = await checkForExternalChange(
+          { stat: statTextFile, read: openTextFileByPath },
+          {
+            // needsDiskCheck already established the path.
+            path: item.path!,
+            savedText: item.savedText,
+            diskBaseline: item.diskBaseline,
+          },
+        );
+        setItems((list) =>
+          list.map((t) => {
+            if (t.id !== item.id) return t;
+            if (!outcomeStillApplies(item, t)) return t;
+            return outcome.kind === "unchanged"
+              ? { ...t, diskBaseline: outcome.baseline }
+              : { ...t, external: outcome.change };
+          }),
+        );
+      }
+    } finally {
+      sweepingRef.current = false;
     }
   }
 
@@ -302,6 +426,10 @@ function App() {
     // updateActiveItemText, only on the first (clean → dirty) edit.
     if (target.kind === "file" && !target.loaded) {
       await loadItemFromDisk(id);
+    } else if (target.kind === "file") {
+      // A buffer we kept (a modified file) can have gone stale since it was last
+      // looked at; say so now rather than waiting for the next focus.
+      await checkOpenFilesAgainstDisk();
     }
   }
 
@@ -364,6 +492,8 @@ function App() {
               savedText,
               lastActive: stamp,
               languageOverride: asDocumentLanguage(s.language),
+              diskBaseline: null,
+              external: null,
             };
           }
           const path = s.path ?? "";
@@ -379,6 +509,12 @@ function App() {
               savedText: s.saved_text ?? "",
               lastActive: stamp,
               languageOverride: asDocumentLanguage(s.language),
+              // Stamps are not persisted, so a restored draft starts with an
+              // unknown baseline. That is what makes the first check read and
+              // compare bytes — which is exactly how a file edited while markpad
+              // was closed gets reported.
+              diskBaseline: null,
+              external: null,
             };
           }
           return {
@@ -391,6 +527,8 @@ function App() {
             savedText: "",
             lastActive: stamp,
             languageOverride: asDocumentLanguage(s.language),
+            diskBaseline: null,
+            external: null,
           };
         })
         .filter((t) => t.kind === "untitled" || (t.path?.length ?? 0) > 0);
@@ -502,6 +640,10 @@ function App() {
     if (activeItem.kind !== "file" || !activeItem.path) return;
     if (activeItem.text === activeItem.savedText) return;
     if (savingById[activeItem.id]) return;
+    // Hold off while an outside edit is waiting on the user: auto-saving here
+    // would overwrite it before they had a chance to look. Answering the notice
+    // either way — reload, or keep my version — releases the hold.
+    if (activeItem.external !== null) return;
     const id = activeItem.id;
     const handle = setTimeout(() => {
       void performSave(id);
@@ -544,6 +686,8 @@ function App() {
       savedText: "",
       lastActive: stamp,
       languageOverride: null,
+      diskBaseline: null,
+      external: null,
     };
     const prevActive = activeIdRef.current;
     setItems((prev) => capList([...prev, newItem], id, prevActive));
@@ -574,6 +718,8 @@ function App() {
         savedText: result.content,
         lastActive: stamp,
         languageOverride: null,
+        diskBaseline: null,
+        external: null,
       };
       const prevActive = activeIdRef.current;
       setItems((prev) => capList([...prev, newItem], id, prevActive));
@@ -609,6 +755,8 @@ function App() {
         savedText: "",
         lastActive: stamp,
         languageOverride: null,
+        diskBaseline: null,
+        external: null,
       };
       const prevActive = activeIdRef.current;
       const next = capList([...itemsRef.current, newItem], id, prevActive);
@@ -675,6 +823,8 @@ function App() {
                   languageOverride: hasLanguageExtension(result.path)
                     ? null
                     : t.languageOverride,
+                  diskBaseline: null,
+                  external: null,
                 }
               : t,
           ),
@@ -689,7 +839,21 @@ function App() {
       const result = await saveTextFile(item.path, outbound);
       if (result.kind === "ok") {
         setItems((list) =>
-          list.map((t) => (t.id === id ? { ...t, savedText: outbound } : t)),
+          list.map((t) =>
+            t.id === id
+              ? {
+                  ...t,
+                  savedText: outbound,
+                  // Our own write moves the stamp, so the old baseline is stale.
+                  // Clearing it makes the next check read once and find the bytes
+                  // it already expects — no notice, and no bookkeeping to get
+                  // wrong. Clearing `external` records the user's intent when
+                  // they saved over a reported change: their version wins.
+                  diskBaseline: null,
+                  external: null,
+                }
+              : t,
+          ),
         );
         setError(null);
         success = true;
@@ -853,13 +1017,34 @@ function App() {
   const handleNewFileRef = useRef(handleNewFile);
   const handleOpenFileRef = useRef(handleOpenFile);
   const handleToggleSidebarRef = useRef(handleToggleSidebar);
+  const checkAgainstDiskRef = useRef(checkOpenFilesAgainstDisk);
 
   useEffect(() => {
     handleSaveRef.current = handleSave;
     handleNewFileRef.current = handleNewFile;
     handleOpenFileRef.current = handleOpenFile;
     handleToggleSidebarRef.current = handleToggleSidebar;
+    checkAgainstDiskRef.current = checkOpenFilesAgainstDisk;
   });
+
+  // --- Coming back to the window: compare the open buffers with disk. ---
+  useEffect(() => {
+    let cancelled = false;
+    let unsubscribe: (() => void) | null = null;
+
+    void (async () => {
+      const off = await subscribeToAppFocus(() => {
+        void checkAgainstDiskRef.current();
+      });
+      if (cancelled) off();
+      else unsubscribe = off;
+    })();
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, []);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -938,6 +1123,15 @@ function App() {
         />
         {error !== null && (
           <ErrorBanner message={error} onDismiss={() => setError(null)} />
+        )}
+        {activeItem !== null && activeItem.external !== null && (
+          <ExternalChangeBanner
+            name={activeItem.name}
+            kind={activeItem.external.kind}
+            unsaved={hasUnsavedWork(activeItem)}
+            onReload={() => void reloadItemFromDisk(activeItem.id)}
+            onDismiss={() => acknowledgeExternalChange(activeItem.id)}
+          />
         )}
         <div className="flex-1 min-h-0">
           {activeItem === null ? (
