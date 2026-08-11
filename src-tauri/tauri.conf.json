@@ -47,6 +47,14 @@
         ],
         "description": "JSON document",
         "name": "JSON"
+      },
+      {
+        "ext": [
+          "yaml",
+          "yml"
+        ],
+        "description": "YAML document",
+        "name": "YAML"
       }
     ]
   }

@@ -20,8 +20,10 @@
     --accent-soft  translucent accent wash for the active list row
     --selection    editor text-selection background
     --code-bg      inline code / code-block background in the preview
-    --json-*       JSON syntax token colors (keys, strings, numbers, and
-                   true/false/null) for the editor's highlight style
+    --syntax-*     editor syntax token colors, shared by the JSON and YAML
+                   highlight styles: keys, strings, numbers, literals
+                   (true/false/null, and YAML anchors, aliases and tags), and
+                   comments. Punctuation takes --muted.
 */
 :root {
   --bg: #ffffff;
@@ -35,10 +37,11 @@
   --accent-soft: rgb(99 102 241 / 0.12);
   --selection: #c7d2fe; /* indigo-200 */
   --code-bg: #f1f2f4;
-  --json-key: #1d4ed8; /* blue-700 */
-  --json-string: #15803d; /* green-700 */
-  --json-number: #b45309; /* amber-700 */
-  --json-literal: #7e22ce; /* purple-700 */
+  --syntax-key: #1d4ed8; /* blue-700 */
+  --syntax-string: #15803d; /* green-700 */
+  --syntax-number: #b45309; /* amber-700 */
+  --syntax-literal: #7e22ce; /* purple-700 */
+  --syntax-comment: #64748b; /* slate-500 */
   color-scheme: light;
 }
 
@@ -54,10 +57,11 @@
   --accent-soft: rgb(129 140 248 / 0.18);
   --selection: rgb(129 140 248 / 0.3);
   --code-bg: #1c1f26;
-  --json-key: #93c5fd; /* blue-300 */
-  --json-string: #86efac; /* green-300 */
-  --json-number: #fcd34d; /* amber-300 */
-  --json-literal: #d8b4fe; /* purple-300 */
+  --syntax-key: #93c5fd; /* blue-300 */
+  --syntax-string: #86efac; /* green-300 */
+  --syntax-number: #fcd34d; /* amber-300 */
+  --syntax-literal: #d8b4fe; /* purple-300 */
+  --syntax-comment: #94a3b8; /* slate-400 */
   color-scheme: dark;
 }
 

@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
 } from "react";
 import {
@@ -15,6 +16,7 @@ import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { json, jsonLanguage, jsonParseLinter } from "@codemirror/lang-json";
+import { yaml, yamlLanguage } from "@codemirror/lang-yaml";
 import { linter } from "@codemirror/lint";
 import {
   foldGutter,
@@ -30,9 +32,14 @@ import {
   markdownFormattingKeymap,
   runFormatAction,
 } from "../lib/formatActions";
-import type { DocumentLanguage } from "../lib/documentLanguage";
-import { runJsonAction, type JsonAction } from "../lib/jsonActions";
+import {
+  isDataLanguage,
+  type DocumentLanguage,
+} from "../lib/documentLanguage";
+import { runDataAction, type DataAction } from "../lib/dataActions";
 import { jsonTypingExtensions } from "../lib/jsonAutoEdit";
+import { yamlDiagnostics } from "../lib/yamlActions";
+import { yamlTypingExtensions } from "../lib/yamlAutoEdit";
 
 export type EditorHandle = {
   getState(): EditorState;
@@ -40,7 +47,7 @@ export type EditorHandle = {
   getScrollSnapshot(): StateEffect<unknown>;
   applyScrollSnapshot(effect: StateEffect<unknown>): void;
   format(action: FormatAction): void;
-  runJsonAction(action: JsonAction): void;
+  runDataAction(action: DataAction): void;
   focus(): void;
   getScrollTop(): number;
   /** Source line shown at the top of the viewport, or null before mount. */
@@ -53,10 +60,10 @@ type EditorProps = {
   language: DocumentLanguage;
   onChange: (next: string) => void;
   onActiveFormatsChange?: (active: FormatAction[]) => void;
-  /** Outcome of every JSON action: a parse-error message, or null on success
-      so the app can clear a previously shown banner. The editor pane has no
-      chrome of its own for messages. */
-  onJsonActionResult?: (error: string | null) => void;
+  /** Outcome of every JSON/YAML action: a parse-error message, or null on
+      success so the app can clear a previously shown banner. The editor pane has
+      no chrome of its own for messages. */
+  onDataActionResult?: (error: string | null) => void;
   /** Fired on every scroll of the editor, user-driven or programmatic. */
   onScroll?: () => void;
 };
@@ -102,8 +109,8 @@ const editorTheme = EditorView.theme({
   ".cm-activeLineGutter, .cm-activeLine": {
     backgroundColor: "transparent",
   },
-  // The rules below only apply in JSON mode (markdown states include no
-  // fold or lint extensions).
+  // The rules below only apply in JSON and YAML mode (markdown states include
+  // no fold or lint extensions).
   ".cm-foldGutter .cm-gutterElement": {
     cursor: "pointer",
   },
@@ -123,20 +130,44 @@ const editorTheme = EditorView.theme({
   },
 });
 
-// JSON token colors come from CSS variables so the light/dark palettes in
+// Syntax token colors come from CSS variables so the light/dark palettes in
 // styles.css stay the single source of truth for theming.
 const jsonHighlightStyle = HighlightStyle.define([
-  { tag: tags.propertyName, color: "var(--json-key)" },
-  { tag: tags.string, color: "var(--json-string)" },
-  { tag: tags.number, color: "var(--json-number)" },
-  { tag: [tags.bool, tags.null], color: "var(--json-literal)" },
+  { tag: tags.propertyName, color: "var(--syntax-key)" },
+  { tag: tags.string, color: "var(--syntax-string)" },
+  { tag: tags.number, color: "var(--syntax-number)" },
+  { tag: [tags.bool, tags.null], color: "var(--syntax-literal)" },
   { tag: [tags.separator, tags.bracket], color: "var(--muted)" },
+]);
+
+// The YAML parser reports what the grammar can know: a plain scalar is content
+// whether it reads as a number or a word, so only quoted scalars are strings and
+// there is no number or boolean token to color. Anchors, aliases and tags share
+// the literal color — all three are references rather than data.
+const yamlHighlightStyle = HighlightStyle.define([
+  { tag: tags.propertyName, color: "var(--syntax-key)" },
+  { tag: [tags.string, tags.special(tags.string)], color: "var(--syntax-string)" },
+  { tag: tags.comment, color: "var(--syntax-comment)" },
+  { tag: [tags.labelName, tags.typeName], color: "var(--syntax-literal)" },
+  {
+    tag: [
+      tags.separator,
+      tags.punctuation,
+      tags.bracket,
+      tags.meta,
+      tags.keyword,
+    ],
+    color: "var(--muted)",
+  },
 ]);
 
 // Which language a state was built with. Identity check against the language
 // facet, so snapshot-restored states report correctly without extra tracking.
 function stateLanguage(state: EditorState): DocumentLanguage {
-  return state.facet(languageFacet) === jsonLanguage ? "json" : "markdown";
+  const facet = state.facet(languageFacet);
+  if (facet === jsonLanguage) return "json";
+  if (facet === yamlLanguage) return "yaml";
+  return "markdown";
 }
 
 // The per-language extension set lives in a compartment so a language toggle
@@ -150,13 +181,15 @@ const jsonLinter = linter((view) =>
   view.state.doc.toString().trim() === "" ? [] : jsonParseLinter()(view),
 );
 
+const yamlLinter = linter((view) => yamlDiagnostics(view.state.doc.toString()));
+
 const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   {
     value,
     language,
     onChange,
     onActiveFormatsChange,
-    onJsonActionResult,
+    onDataActionResult,
     onScroll,
   },
   ref,
@@ -165,7 +198,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
   const onActiveFormatsChangeRef = useRef(onActiveFormatsChange);
-  const onJsonActionResultRef = useRef(onJsonActionResult);
+  const onDataActionResultRef = useRef(onDataActionResult);
   const onScrollRef = useRef(onScroll);
   const lastActiveKeyRef = useRef<string | null>(null);
 
@@ -178,8 +211,8 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   }, [onActiveFormatsChange]);
 
   useEffect(() => {
-    onJsonActionResultRef.current = onJsonActionResult;
-  }, [onJsonActionResult]);
+    onDataActionResultRef.current = onDataActionResult;
+  }, [onDataActionResult]);
 
   useEffect(() => {
     onScrollRef.current = onScroll;
@@ -188,7 +221,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   // Recompute which toggle actions are active at the selection and notify the
   // toolbar, deduped so we don't re-render it on every keystroke that doesn't
   // change the active set. Markdown-only: the format toolbar is hidden for
-  // JSON documents, and the toggle detection walks a markdown syntax tree.
+  // data documents, and the toggle detection walks a markdown syntax tree.
   const emitActiveFormats = useCallback((state: EditorState) => {
     const cb = onActiveFormatsChangeRef.current;
     if (!cb) return;
@@ -200,48 +233,70 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     cb(active);
   }, []);
 
-  const dispatchJsonAction = useCallback(
-    (view: EditorView, action: JsonAction) => {
+  const dispatchDataAction = useCallback(
+    (view: EditorView, action: DataAction) => {
+      const lang = stateLanguage(view.state);
+      if (!isDataLanguage(lang)) return;
       // Always report — null on success clears a previously shown banner.
-      onJsonActionResultRef.current?.(runJsonAction(view, action));
+      onDataActionResultRef.current?.(runDataAction(view, lang, action));
     },
     [],
   );
 
+  // Format wins over any default binding for the same chord. Shared by both
+  // data languages — dispatchDataAction routes on the state's own language.
+  const formatKeymap = useMemo(
+    () =>
+      Prec.high(
+        keymap.of([
+          {
+            key: "Shift-Alt-f",
+            run: (view: EditorView) => {
+              dispatchDataAction(view, "format");
+              return true;
+            },
+          },
+        ]),
+      ),
+    [dispatchDataAction],
+  );
+
   // The extensions that differ between languages, swapped via perLanguageConf.
   const languageExtensions = useCallback(
-    (lang: DocumentLanguage) =>
-      lang === "json"
-        ? [
-            // Format wins over any default binding for the same chord.
-            Prec.high(
-              keymap.of([
-                {
-                  key: "Shift-Alt-f",
-                  run: (view: EditorView) => {
-                    dispatchJsonAction(view, "format");
-                    return true;
-                  },
-                },
-              ]),
-            ),
-            keymap.of([...foldKeymap]),
-            jsonTypingExtensions(),
-            json(),
-            jsonLinter,
-            syntaxHighlighting(jsonHighlightStyle),
-            foldGutter(),
-          ]
-        : [
-            // Formatting shortcuts (Mod-b, Mod-i, …) take precedence so
-            // they win over any default binding for the same chord.
-            Prec.high(keymap.of([...markdownFormattingKeymap])),
-            // GFM base so ~~strikethrough~~ parses as a real
-            // `Strikethrough` node — toolbar toggle detection reads the
-            // parsed tree.
-            markdown({ base: markdownLanguage }),
-          ],
-    [dispatchJsonAction],
+    (lang: DocumentLanguage) => {
+      if (lang === "json") {
+        return [
+          formatKeymap,
+          keymap.of([...foldKeymap]),
+          jsonTypingExtensions(),
+          json(),
+          jsonLinter,
+          syntaxHighlighting(jsonHighlightStyle),
+          foldGutter(),
+        ];
+      }
+      if (lang === "yaml") {
+        return [
+          formatKeymap,
+          keymap.of([...foldKeymap]),
+          yamlTypingExtensions(),
+          yaml(),
+          yamlLinter,
+          syntaxHighlighting(yamlHighlightStyle),
+          foldGutter(),
+        ];
+      }
+      return [
+        // Formatting shortcuts (Mod-b, Mod-i, …) take precedence so
+        // they win over any default binding for the same chord.
+        Prec.high(keymap.of([...markdownFormattingKeymap])),
+        // GFM base so ~~strikethrough~~ parses as a real
+        // `Strikethrough` node — toolbar toggle detection reads the
+        // parsed tree.
+        markdown({ base: markdownLanguage }),
+      ];
+    },
+    [formatKeymap],
   );
 
   // Build a fresh EditorState for a document. Used on mount and whenever the
@@ -258,8 +313,8 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         extensions: [
           history(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
-          // Shared by both languages; listed before perLanguageConf so the
-          // number gutter stays left of JSON's fold gutter.
+          // Shared by every language; listed before perLanguageConf so the
+          // number gutter stays left of the data languages' fold gutter.
           lineNumbers(),
           perLanguageConf.of(languageExtensions(lang)),
           EditorView.lineWrapping,
@@ -297,10 +352,10 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         // A toolbar click moves focus to the button; return it to the document.
         view.focus();
       },
-      runJsonAction: (action) => {
+      runDataAction: (action) => {
         const view = viewRef.current;
         if (!view) return;
-        dispatchJsonAction(view, action);
+        dispatchDataAction(view, action);
         // A toolbar click moves focus to the button; return it to the document.
         view.focus();
       },
@@ -340,7 +395,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         view.scrollDOM.scrollTop += target - current;
       },
     }),
-    [emitActiveFormats, dispatchJsonAction],
+    [emitActiveFormats, dispatchDataAction],
   );
 
   useEffect(() => {

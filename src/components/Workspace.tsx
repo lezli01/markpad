@@ -2,10 +2,15 @@ import { useCallback, useRef, useState, type RefObject } from "react";
 import Editor, { type EditorHandle } from "./Editor";
 import Preview, { type PreviewHandle } from "./Preview";
 import FormatToolbar from "./FormatToolbar";
-import JsonToolbar from "./JsonToolbar";
+import DataToolbar from "./DataToolbar";
 import type { FormatAction } from "../lib/formatActions";
-import type { JsonAction } from "../lib/jsonActions";
-import type { DocumentLanguage } from "../lib/documentLanguage";
+import type { DataAction } from "../lib/dataActions";
+import {
+  DOCUMENT_LANGUAGES,
+  isDataLanguage,
+  LANGUAGE_LABELS,
+  type DocumentLanguage,
+} from "../lib/documentLanguage";
 import type { Theme, ViewMode } from "../lib/preferences";
 
 type WorkspaceProps = {
@@ -16,10 +21,10 @@ type WorkspaceProps = {
   theme: Theme;
   onTextChange: (next: string) => void;
   onFormat: (id: FormatAction) => void;
-  onJsonAction: (id: JsonAction) => void;
-  /** Parse-error message from a JSON action, or null on success (clears any
-      previously shown banner). */
-  onJsonActionResult: (error: string | null) => void;
+  onDataAction: (id: DataAction) => void;
+  /** Parse-error message from a JSON/YAML action, or null on success (clears
+      any previously shown banner). */
+  onDataActionResult: (error: string | null) => void;
   onLanguageChange: (language: DocumentLanguage) => void;
   modKey: string;
   /** Ref objects (not callback refs): scroll sync reads both handles here. */
@@ -60,8 +65,8 @@ export default function Workspace({
   theme,
   onTextChange,
   onFormat,
-  onJsonAction,
-  onJsonActionResult,
+  onDataAction,
+  onDataActionResult,
   onLanguageChange,
   modKey,
   editorRef,
@@ -69,18 +74,18 @@ export default function Workspace({
 }: WorkspaceProps) {
   const [activeFormats, setActiveFormats] = useState<FormatAction[]>([]);
 
-  // JSON documents are editor-only: the markdown preview would render the
-  // buffer as markdown garbage, so it is never mounted and the view mode is
+  // JSON and YAML documents are editor-only: the markdown preview would render
+  // the buffer as markdown garbage, so it is never mounted and the view mode is
   // effectively "editor" regardless of the (untouched) saved preference.
-  const isJson = language === "json";
+  const isData = isDataLanguage(language);
 
   // Editor MUST stay mounted across every view-mode switch so CodeMirror's
   // selection, cursor, and undo history survive (per research.md §3, FR-012).
   // In "preview" mode it is hidden via Tailwind's `hidden` (display: none),
   // not unmounted. Preview is pure and may be conditionally rendered.
-  const editorHidden = !isJson && viewMode === "preview";
-  const previewMounted = !isJson && viewMode !== "editor";
-  const isSplit = !isJson && viewMode === "split";
+  const editorHidden = !isData && viewMode === "preview";
+  const previewMounted = !isData && viewMode !== "editor";
+  const isSplit = !isData && viewMode === "split";
 
   // Scroll sync, split view only — with a single pane there is nothing to
   // follow.
@@ -166,8 +171,8 @@ export default function Workspace({
                 }
               }}
             >
-              {isJson ? (
-                <JsonToolbar onAction={onJsonAction} />
+              {isData ? (
+                <DataToolbar language={language} onAction={onDataAction} />
               ) : (
                 <FormatToolbar
                   onFormat={onFormat}
@@ -185,12 +190,11 @@ export default function Workspace({
                 onLanguageChange(e.target.value as DocumentLanguage)
               }
             >
-              <option className={languageOption} value="markdown">
-                Markdown
-              </option>
-              <option className={languageOption} value="json">
-                JSON
-              </option>
+              {DOCUMENT_LANGUAGES.map((option) => (
+                <option key={option} className={languageOption} value={option}>
+                  {LANGUAGE_LABELS[option]}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -201,7 +205,7 @@ export default function Workspace({
             language={language}
             onChange={onTextChange}
             onActiveFormatsChange={setActiveFormats}
-            onJsonActionResult={onJsonActionResult}
+            onDataActionResult={onDataActionResult}
             onScroll={handleEditorScroll}
           />
         </div>

@@ -1,8 +1,8 @@
 # MarkPad Architecture
 
-MarkPad is a cross-platform desktop app for editing Markdown (and JSON) with a
-live preview. This is the high-level map; feature-level specs live under
-[`specs/`](../specs).
+MarkPad is a cross-platform desktop app for editing Markdown (and the data
+languages JSON and YAML) with a live preview. This is the high-level map;
+feature-level specs live under [`specs/`](../specs).
 
 ## Frontend
 
@@ -22,13 +22,17 @@ chokepoint `src/lib/preferences.ts`.
 
 ## Editor
 
-CodeMirror 6 provides the editing surface for both languages, with line numbers
-and code folding. The per-language extensions live in a compartment, so a
-buffer can switch between Markdown and JSON (`src/lib/documentLanguage.ts`)
+CodeMirror 6 provides the editing surface for every language, with line numbers
+and code folding. The per-language extensions live in a compartment, so a buffer
+can switch between Markdown, JSON and YAML (`src/lib/documentLanguage.ts`)
 without losing its content or undo history. Markdown documents get the
-formatting keymap and toolbar commands (`src/lib/formatActions.ts`); JSON
-documents get linting, folding, typing comforts, and the Format / Minify /
-Sort keys actions.
+formatting keymap and toolbar commands (`src/lib/formatActions.ts`); the two
+data languages get linting, folding, typing comforts
+(`src/lib/jsonAutoEdit.ts`, `src/lib/yamlAutoEdit.ts`) and their own rewrite
+actions, dispatched onto the view by `src/lib/dataActions.ts` over the pure text
+transformations in `src/lib/jsonActions.ts` and `src/lib/yamlActions.ts`. YAML's
+rewrites and diagnostics go through the `yaml` package's document model, which is
+what keeps comments and anchors alive across a Format.
 
 ## Markdown Rendering
 
