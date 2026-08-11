@@ -10,8 +10,8 @@
 
 <p align="center">
   Edit Markdown on the left, see it rendered on the right — with a recent-files<br>
-  sidebar, a formatting toolbar, JSON editing, light/dark theming, auto-save, and OS<br>
-  file-association handling, in a small native <code>Tauri</code> app for Windows, Linux, and macOS.
+  sidebar, a formatting toolbar, JSON and YAML editing, light/dark theming, auto-save,<br>
+  and OS file-association handling, in a small native <code>Tauri</code> app for Windows, Linux, and macOS.
 </p>
 
 <p align="center">
@@ -76,13 +76,21 @@ side-by-side work:
   <img src="docs/images/json-light.png" alt="MarkPad editing JSON: the editor fills the window with line numbers and a folded settings object, the pane header offers Format, Minify, Sort keys, Collapse all, and Expand all next to the JSON language toggle, and the view-mode switcher is disabled while the preview steps aside">
 </picture>
 
+- **YAML file support.** Open a `.yaml` or `.yml` file — a workflow, a compose file, a manifest — for syntax highlighting, live validation with the parser's own message, line numbers, and collapse/expand of mappings, sequences and block literals, plus one-click Format (2-space indent, `Shift+Alt+F`) and Sort keys. Both rewrite actions go through a real YAML document model, so comments, anchors, aliases, tags, block literals and multi-document `---` files come back out intact. Like JSON, YAML documents are editor-only.
+- **YAML typing comforts.** Enter carries the shape of the line above it: a `- ` item opens the next item at the same indent, an item left empty ends the list and steps back out to the level the sequence hangs off, and a key with no value yet opens its block one level in. Typing `:` after a bare key adds the space YAML requires — `key:value` is a single scalar, not a mapping — brackets and quotes pair as in JSON, and JSON pasted into an empty YAML buffer lands as YAML. Every automatic insertion undoes on its own with `Ctrl+Z`.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/yaml-dark.png">
+  <img src="docs/images/yaml-light.png" alt="MarkPad editing a YAML workflow: the editor fills the window with line numbers, a comment, highlighted keys, a quoted tag pattern, an &amp;defaults anchor and a folded build job, while the pane header offers Format, Sort keys, Collapse all, and Expand all next to the YAML language toggle and the view-mode switcher is disabled">
+</picture>
+
 - **Recent files sidebar.** A left-hand panel lists up to 50 recently opened items — most-recent first, with modified files pinned to the top and marked. Click one to open it; modified and untitled documents keep their unsaved edits, cursor, and scroll position.
 - **Recents context menu.** Right-click an entry for its full path, Copy full path, Copy file name, Reveal in file manager, and the bulk closes — Close, Close others, Close all above, Close all below, Close all saved, and Close all. Bulk closes skip anything with unsaved edits, so they never open a prompt and never lose a draft; each entry shows how many items it would close and greys out at zero.
 - **Collapsible, resizable sidebar.** Drag the divider to resize the recents panel, or hide it entirely for distraction-free writing with the toolbar toggle or `Ctrl+\`; the width and collapsed state persist.
 - **New empty file.** Start a fresh Markdown document from the toolbar or `Ctrl+N` / `⌘N`; it appears in the recents list as an untitled draft, and the first Save prompts for a path.
 - **Light and dark theme.** Honors the operating system's appearance preference by default, with a manual toggle in the toolbar.
-- **Open files from disk.** Native file picker biased toward `.md`, `.markdown`, and `.json`, with a fallback to all files.
-- **Open files from your file manager.** Set MarkPad as the default for `.md` or `.json` and a double-click opens MarkPad (or routes to the running instance).
+- **Open files from disk.** Native file picker biased toward `.md`, `.markdown`, `.json`, `.yaml`, and `.yml`, with a fallback to all files.
+- **Open files from your file manager.** Set MarkPad as the default for `.md`, `.json`, or `.yaml` and a double-click opens MarkPad (or routes to the running instance).
 - **One window per user.** MarkPad runs as a single instance; new file requests bring the existing window to the foreground.
 - **Save back to disk.** Manual Save plus a visible modified indicator in the recents list so you always know whether your edits are on disk.
 - **Optional auto-save.** Tick the box once and edits land on disk shortly after you stop typing, while a file is open.
@@ -99,6 +107,7 @@ side-by-side work:
 - [Vite](https://vitejs.dev/) — dev server and build
 - [CodeMirror 6](https://codemirror.net/) — editor
 - [markdown-it](https://github.com/markdown-it/markdown-it) — Markdown rendering
+- [yaml](https://eemeli.org/yaml/) — YAML parsing, validation, and comment-preserving rewrites
 - [Mermaid](https://mermaid.js.org/) — diagrams from ` ```mermaid ` blocks
 - [@viz-js/viz](https://github.com/mdaines/viz-js) — Graphviz, compiled to run in the app
 - [DOMPurify](https://github.com/cure53/DOMPurify) — preview sanitization
@@ -167,8 +176,8 @@ application-data directory; nothing is sent over the network.
 
 Early development, but already usable day-to-day. The split-pane workspace, the
 recent-files sidebar with draft persistence, file open/save, view modes, theming,
-auto-save, JSON editing with formatting and folding, OS file-association handling,
-single-instance routing, and session restore are working today. Specs for shipped and in-progress features live under
+auto-save, JSON and YAML editing with formatting and folding, OS file-association
+handling, single-instance routing, and session restore are working today. Specs for shipped and in-progress features live under
 [`specs/`](specs); open issues and follow-ups are in the
 [issue tracker](https://github.com/lezli01/markpad/issues).
 

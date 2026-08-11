@@ -21,7 +21,19 @@ import type { DocumentLanguage } from "./documentLanguage";
 
 const MARKDOWN_FILTER = { name: "Markdown", extensions: ["md", "markdown"] };
 const JSON_FILTER = { name: "JSON", extensions: ["json"] };
+const YAML_FILTER = { name: "YAML", extensions: ["yaml", "yml"] };
 const ALL_FILES_FILTER = { name: "All Files", extensions: ["*"] };
+
+// Save-As leads with the document's own language so the dialog defaults to the
+// right extension for an untitled draft; the others stay available behind it.
+const SAVE_FILTERS: Record<
+  DocumentLanguage,
+  ReadonlyArray<{ name: string; extensions: string[] }>
+> = {
+  markdown: [MARKDOWN_FILTER, JSON_FILTER, YAML_FILTER, ALL_FILES_FILTER],
+  json: [JSON_FILTER, MARKDOWN_FILTER, YAML_FILTER, ALL_FILES_FILTER],
+  yaml: [YAML_FILTER, MARKDOWN_FILTER, JSON_FILTER, ALL_FILES_FILTER],
+};
 
 export type OpenResult =
   | { kind: "ok"; name: string; path: string; content: string }
@@ -104,7 +116,12 @@ export async function openTextFile(): Promise<OpenResult> {
     picked = await open({
       multiple: false,
       directory: false,
-      filters: [MARKDOWN_FILTER, JSON_FILTER, ALL_FILES_FILTER],
+      filters: [
+        MARKDOWN_FILTER,
+        JSON_FILTER,
+        YAML_FILTER,
+        ALL_FILES_FILTER,
+      ],
     });
   } catch (err) {
     console.warn("Open dialog failed:", err);
@@ -155,12 +172,7 @@ export async function saveTextFileAs(
   let picked: string | null;
   try {
     picked = await save({
-      // The document's language leads so the dialog defaults to the right
-      // extension for untitled drafts.
-      filters:
-        language === "json"
-          ? [JSON_FILTER, MARKDOWN_FILTER, ALL_FILES_FILTER]
-          : [MARKDOWN_FILTER, JSON_FILTER, ALL_FILES_FILTER],
+      filters: [...SAVE_FILTERS[language]],
       defaultPath: defaultName,
     });
   } catch (err) {

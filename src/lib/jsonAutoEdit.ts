@@ -33,7 +33,8 @@ import {
   closeBracketsKeymap,
   insertBracket,
 } from "@codemirror/autocomplete";
-import { applyJsonTextAction, runJsonAction } from "./jsonActions";
+import { runDataAction } from "./dataActions";
+import { applyJsonTextAction } from "./jsonActions";
 
 /** Where the caret sits inside the innermost container.
     - `key`      a property name is expected (`{` or `,` behind the caret)
@@ -432,9 +433,9 @@ export function pasteJson(
     selection: { anchor: from + clipboard.length },
     userEvent: "input.paste",
   });
-  // A second transaction, isolated in the history by runJsonAction: one undo
+  // A second transaction, isolated in the history by runDataAction: one undo
   // hands back the exact clipboard text, a second removes the paste.
-  runJsonAction(view, "format");
+  runDataAction(view, "json", "format");
   return true;
 }
 

@@ -35,8 +35,10 @@ pub struct SessionItem {
     pub text: Option<String>,
     #[serde(default)]
     pub saved_text: Option<String>,
-    /// Manual language override ("markdown" | "json"); None when the language
-    /// derives from the path. Defaults keep pre-JSON-support records loadable.
+    /// Manual language override ("markdown" | "json" | "yaml"); None when the
+    /// language derives from the path. The value is opaque here — the frontend
+    /// validates it (see asDocumentLanguage), so a record written by a newer
+    /// version loads unchanged. Defaults keep pre-JSON-support records loadable.
     #[serde(default)]
     pub language: Option<String>,
 }

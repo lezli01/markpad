@@ -24,7 +24,9 @@ import { getPendingFiles, subscribeToOpenFiles } from "./lib/launchFiles";
 import { loadSession, saveSession, type SessionItem } from "./lib/session";
 import {
   asDocumentLanguage,
+  defaultExtension,
   hasLanguageExtension,
+  isDataLanguage,
   resolveLanguage,
   type DocumentLanguage,
 } from "./lib/documentLanguage";
@@ -138,8 +140,8 @@ function EmptyState({ modKey }: { modKey: string }) {
           No file open
         </h2>
         <p className="text-sm text-[color:var(--muted)] mb-6">
-          Open an existing markdown or JSON file, or create a new one to start
-          editing.
+          Open an existing Markdown, JSON, or YAML file, or create a new one to
+          start editing.
         </p>
         <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 items-center text-sm text-[color:var(--text)] text-left">
           <kbd className={kbdClass}>{modKey}+N</kbd>
@@ -655,7 +657,7 @@ function App() {
       const language = resolveLanguage(item.path, item.languageOverride);
       const result = await saveTextFileAs(
         outbound,
-        `${item.name}.${language === "json" ? "json" : "md"}`,
+        `${item.name}.${defaultExtension(language)}`,
         language,
       );
       if (result.kind === "ok") {
@@ -920,7 +922,7 @@ function App() {
       <div className="flex-1 min-w-0 h-full flex flex-col">
         <Toolbar
           viewMode={viewMode}
-          viewModesEnabled={activeLanguage !== "json"}
+          viewModesEnabled={!isDataLanguage(activeLanguage)}
           theme={theme}
           saveEnabled={saveEnabled}
           saving={activeSaving}
@@ -948,8 +950,8 @@ function App() {
               theme={theme}
               onTextChange={updateActiveItemText}
               onFormat={(id) => editorRef.current?.format(id)}
-              onJsonAction={(id) => editorRef.current?.runJsonAction(id)}
-              onJsonActionResult={setError}
+              onDataAction={(id) => editorRef.current?.runDataAction(id)}
+              onDataActionResult={setError}
               onLanguageChange={handleSetLanguage}
               modKey={modKey}
               editorRef={editorRef}
