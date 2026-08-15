@@ -50,9 +50,13 @@ import {
   type SearchStatus,
 } from "./lib/documentSearch";
 import {
+  DEFAULT_WORKSPACE_SEARCH_SCOPE,
   isWorkspaceSearchShortcut,
+  searchOpenFiles,
   searchWorkspace,
+  type OpenFileSearchSource,
   type WorkspaceSearchFile,
+  type WorkspaceSearchScope,
   type WorkspaceSearchStatus,
 } from "./lib/workspaceSearch";
 import {
@@ -110,7 +114,7 @@ type ItemSnapshot = {
 type SidebarView = "recents" | "workspaceSearch";
 
 type PendingLocation = {
-  path: string;
+  itemId: ItemId;
   lineNumber: number;
 };
 
@@ -190,7 +194,7 @@ function EmptyState({ modKey }: { modKey: string }) {
           <kbd className={kbdClass}>{modKey}+S</kbd>
           <span>Save current file</span>
           <kbd className={kbdClass}>{modKey}+Shift+F</kbd>
-          <span>Search files in a folder</span>
+          <span>Search open files or a folder</span>
         </div>
       </div>
     </div>
@@ -221,6 +225,8 @@ function App() {
     EMPTY_SEARCH_STATUS,
   );
   const [workspaceRoot, setWorkspaceRoot] = useState<string | null>(null);
+  const [workspaceSearchScope, setWorkspaceSearchScope] =
+    useState<WorkspaceSearchScope>(DEFAULT_WORKSPACE_SEARCH_SCOPE);
   const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState("");
   const [workspaceSearchFiles, setWorkspaceSearchFiles] = useState<
     WorkspaceSearchFile[]
@@ -504,7 +510,7 @@ function App() {
     const location = pendingLocation;
     if (
       location === null ||
-      activeItem?.path !== location.path ||
+      activeItem?.id !== location.itemId ||
       !activeItem.loaded
     ) {
       return;
@@ -516,7 +522,7 @@ function App() {
       );
     });
     return () => cancelAnimationFrame(frame);
-  }, [activeItem?.loaded, activeItem?.path, activeText, pendingLocation]);
+  }, [activeItem?.id, activeItem?.loaded, activeText, pendingLocation]);
 
   // Prune per-item bookkeeping for items no longer in the list.
   useEffect(() => {
@@ -1110,6 +1116,16 @@ function App() {
     setWorkspaceSearchFocusRequest((request) => request + 1);
   }
 
+  function handleWorkspaceSearchScopeChange(next: WorkspaceSearchScope) {
+    if (next === workspaceSearchScope) return;
+    workspaceSearchSeqRef.current++;
+    setWorkspaceSearchScope(next);
+    setWorkspaceSearchFiles([]);
+    setWorkspaceSearchStatus("idle");
+    setWorkspaceSearchError(null);
+    setWorkspaceSearchFocusRequest((request) => request + 1);
+  }
+
   function handleWorkspaceSearchQueryChange(next: string) {
     workspaceSearchSeqRef.current++;
     setWorkspaceSearchQuery(next);
@@ -1119,9 +1135,51 @@ function App() {
   }
 
   async function handleRunWorkspaceSearch() {
-    const rootPath = workspaceRoot;
     const query = workspaceSearchQuery.trim();
-    if (rootPath === null || query.length === 0) return;
+    if (query.length === 0) return;
+
+    if (workspaceSearchScope === "openFiles") {
+      const openItems = itemsRef.current;
+      if (openItems.length === 0) return;
+
+      const sequence = ++workspaceSearchSeqRef.current;
+      setWorkspaceSearchStatus("searching");
+      setWorkspaceSearchError(null);
+      const sources = (
+        await Promise.all(
+          openItems.map(
+            async (item): Promise<OpenFileSearchSource | null> => {
+              if (item.loaded) {
+                return {
+                  itemId: item.id,
+                  name: item.name,
+                  path: item.path,
+                  content: item.text,
+                };
+              }
+              if (item.path === null) return null;
+              const result = await openTextFileByPath(item.path);
+              return result.kind === "ok"
+                ? {
+                    itemId: item.id,
+                    name: item.name,
+                    path: item.path,
+                    content: result.content,
+                  }
+                : null;
+            },
+          ),
+        )
+      ).filter((source): source is OpenFileSearchSource => source !== null);
+      if (sequence !== workspaceSearchSeqRef.current) return;
+
+      setWorkspaceSearchFiles(searchOpenFiles(sources, query));
+      setWorkspaceSearchStatus("complete");
+      return;
+    }
+
+    const rootPath = workspaceRoot;
+    if (rootPath === null) return;
 
     const sequence = ++workspaceSearchSeqRef.current;
     setWorkspaceSearchStatus("searching");
@@ -1140,15 +1198,20 @@ function App() {
   }
 
   async function handleWorkspaceSearchResult(
-    path: string,
+    file: WorkspaceSearchFile,
     lineNumber: number,
   ) {
     if (viewMode !== "editor") {
       handleSetViewMode("editor");
     }
-    const openedId = await openPaths([path]);
+    let openedId = file.itemId ?? null;
     if (openedId !== null) {
-      setPendingLocation({ path, lineNumber });
+      await activateItem(openedId);
+    } else if (file.path !== null) {
+      openedId = await openPaths([file.path]);
+    }
+    if (openedId !== null) {
+      setPendingLocation({ itemId: openedId, lineNumber });
     }
   }
 
@@ -1312,17 +1375,20 @@ function App() {
               />
             ) : (
               <WorkspaceSearchPanel
+                scope={workspaceSearchScope}
                 rootPath={workspaceRoot}
+                openFileCount={items.length}
                 query={workspaceSearchQuery}
                 files={workspaceSearchFiles}
                 status={workspaceSearchStatus}
                 error={workspaceSearchError}
                 focusRequest={workspaceSearchFocusRequest}
+                onScopeChange={handleWorkspaceSearchScopeChange}
                 onChooseFolder={() => void handleChooseWorkspaceRoot()}
                 onQueryChange={handleWorkspaceSearchQueryChange}
                 onSearch={() => void handleRunWorkspaceSearch()}
-                onSelectResult={(path, lineNumber) =>
-                  void handleWorkspaceSearchResult(path, lineNumber)
+                onSelectResult={(file, lineNumber) =>
+                  void handleWorkspaceSearchResult(file, lineNumber)
                 }
                 onClose={handleCloseWorkspaceSearch}
               />

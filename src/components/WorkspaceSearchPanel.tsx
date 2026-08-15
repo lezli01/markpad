@@ -2,20 +2,24 @@ import { useEffect, useMemo, useRef } from "react";
 import {
   countWorkspaceSearchMatches,
   type WorkspaceSearchFile,
+  type WorkspaceSearchScope,
   type WorkspaceSearchStatus,
 } from "../lib/workspaceSearch";
 
 type WorkspaceSearchPanelProps = {
+  scope: WorkspaceSearchScope;
   rootPath: string | null;
+  openFileCount: number;
   query: string;
   files: WorkspaceSearchFile[];
   status: WorkspaceSearchStatus;
   error: string | null;
   focusRequest: number;
+  onScopeChange: (scope: WorkspaceSearchScope) => void;
   onChooseFolder: () => void;
   onQueryChange: (query: string) => void;
   onSearch: () => void;
-  onSelectResult: (path: string, lineNumber: number) => void;
+  onSelectResult: (file: WorkspaceSearchFile, lineNumber: number) => void;
   onClose: () => void;
 };
 
@@ -56,6 +60,25 @@ function FolderIcon() {
       strokeLinejoin="round"
     >
       <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+    </svg>
+  );
+}
+
+function FilesIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width="15"
+      height="15"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M7 3.5h7l3 3V17a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5.5a2 2 0 0 1 2-2Z" />
+      <path d="M14 3.5V7h3M8 22h8a2 2 0 0 0 2-2" />
     </svg>
   );
 }
@@ -101,12 +124,15 @@ function folderName(path: string): string {
 }
 
 export default function WorkspaceSearchPanel({
+  scope,
   rootPath,
+  openFileCount,
   query,
   files,
   status,
   error,
   focusRequest,
+  onScopeChange,
   onChooseFolder,
   onQueryChange,
   onSearch,
@@ -118,16 +144,19 @@ export default function WorkspaceSearchPanel({
     () => countWorkspaceSearchMatches(files),
     [files],
   );
+  const scopeReady =
+    scope === "openFiles" ? openFileCount > 0 : rootPath !== null;
+  const scopeLabel = scope === "openFiles" ? "open files" : "folder";
 
   useEffect(() => {
-    if (!rootPath) return;
+    if (!scopeReady) return;
     inputRef.current?.focus();
     inputRef.current?.select();
-  }, [focusRequest, rootPath]);
+  }, [focusRequest, scopeReady]);
 
   const searched = status === "complete";
   const searching = status === "searching";
-  const canSearch = rootPath !== null && query.trim().length > 0 && !searching;
+  const canSearch = scopeReady && query.trim().length > 0 && !searching;
 
   return (
     <section
@@ -158,29 +187,75 @@ export default function WorkspaceSearchPanel({
       </header>
 
       <div className="border-b border-[color:var(--border)] p-3">
-        <button
-          type="button"
-          onClick={onChooseFolder}
-          className="group mb-2.5 flex w-full items-center gap-2 rounded-md border border-[color:var(--border)] bg-[color:var(--bg)] px-2.5 py-2 text-left transition-colors hover:border-[color:var(--accent)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+        <div
+          role="group"
+          className="mb-2.5 grid grid-cols-2 rounded-md bg-[color:var(--bg)] p-0.5 ring-1 ring-inset ring-[color:var(--border)]"
+          aria-label="Search scope"
         >
-          <span className="text-[color:var(--accent)]">
-            <FolderIcon />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:var(--muted)]">
-              Workspace
+          {(
+            [
+              ["openFiles", "Open files"],
+              ["folder", "Folder"],
+            ] as const
+          ).map(([value, label]) => {
+            const selected = scope === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => onScopeChange(value)}
+                className={`rounded px-2 py-1.5 text-[11px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] ${
+                  selected
+                    ? "bg-[color:var(--panel)] text-[color:var(--accent)] shadow-sm"
+                    : "text-[color:var(--muted)] hover:text-[color:var(--text)]"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        {scope === "folder" ? (
+          <button
+            type="button"
+            onClick={onChooseFolder}
+            className="group mb-2.5 flex w-full items-center gap-2 rounded-md border border-[color:var(--border)] bg-[color:var(--bg)] px-2.5 py-2 text-left transition-colors hover:border-[color:var(--accent)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+          >
+            <span className="text-[color:var(--accent)]">
+              <FolderIcon />
             </span>
-            <span
-              className="block truncate text-xs font-medium text-[color:var(--text)]"
-              title={rootPath ?? undefined}
-            >
-              {rootPath ? folderName(rootPath) : "Choose a folder"}
+            <span className="min-w-0 flex-1">
+              <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:var(--muted)]">
+                Search folder
+              </span>
+              <span
+                className="block truncate text-xs font-medium text-[color:var(--text)]"
+                title={rootPath ?? undefined}
+              >
+                {rootPath ? folderName(rootPath) : "Choose a folder"}
+              </span>
             </span>
-          </span>
-          <span className="text-[color:var(--muted)] transition-transform group-hover:translate-x-0.5 group-hover:text-[color:var(--accent)]">
-            <ArrowIcon />
-          </span>
-        </button>
+            <span className="text-[color:var(--muted)] transition-transform group-hover:translate-x-0.5 group-hover:text-[color:var(--accent)]">
+              <ArrowIcon />
+            </span>
+          </button>
+        ) : (
+          <div className="mb-2.5 flex items-center gap-2 rounded-md border border-[color:var(--border)] bg-[color:var(--bg)] px-2.5 py-2">
+            <span className="text-[color:var(--accent)]">
+              <FilesIcon />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:var(--muted)]">
+                In MarkPad
+              </span>
+              <span className="block truncate text-xs font-medium text-[color:var(--text)]">
+                {openFileCount} {openFileCount === 1 ? "open file" : "open files"}
+              </span>
+            </span>
+          </div>
+        )}
 
         <form
           className="flex items-stretch overflow-hidden rounded-md border border-[color:var(--border)] bg-[color:var(--bg)] focus-within:border-[color:var(--accent)] focus-within:ring-1 focus-within:ring-[color:var(--accent)]"
@@ -190,15 +265,23 @@ export default function WorkspaceSearchPanel({
           }}
         >
           <label className="sr-only" htmlFor="workspace-search-input">
-            Search text across workspace files
+            Search text across {scopeLabel}
           </label>
           <input
             ref={inputRef}
             id="workspace-search-input"
             type="search"
             value={query}
-            disabled={rootPath === null}
-            placeholder={rootPath ? "Search text…" : "Choose a folder first"}
+            disabled={!scopeReady}
+            placeholder={
+              scope === "openFiles"
+                ? openFileCount > 0
+                  ? "Search open files…"
+                  : "Open a file first"
+                : rootPath
+                  ? "Search this folder…"
+                  : "Choose a folder first"
+            }
             autoComplete="off"
             spellCheck={false}
             onChange={(event) => onQueryChange(event.target.value)}
@@ -217,7 +300,7 @@ export default function WorkspaceSearchPanel({
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="sr-only" aria-live="polite">
           {searching
-            ? "Searching workspace"
+            ? `Searching ${scopeLabel}`
             : searched
               ? `${totalMatches} results in ${files.length} files`
               : ""}
@@ -230,9 +313,21 @@ export default function WorkspaceSearchPanel({
         ) : searching ? (
           <div className="flex items-center gap-2 px-4 py-6 text-xs text-[color:var(--muted)]">
             <span className="size-3.5 animate-spin rounded-full border-2 border-[color:var(--border)] border-t-[color:var(--accent)]" />
-            Scanning workspace…
+            Searching {scopeLabel}…
           </div>
-        ) : rootPath === null ? (
+        ) : scope === "openFiles" && openFileCount === 0 ? (
+          <div className="px-5 py-10 text-center">
+            <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full border border-[color:var(--border)] text-[color:var(--muted)]">
+              <FilesIcon />
+            </div>
+            <p className="text-sm font-medium text-[color:var(--text)]">
+              No files are open
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-[color:var(--muted)]">
+              Open or create a file, then search its current contents here.
+            </p>
+          </div>
+        ) : scope === "folder" && rootPath === null ? (
           <div className="px-5 py-10 text-center">
             <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full border border-[color:var(--border)] text-[color:var(--muted)]">
               <SearchFilesIcon size={20} />
@@ -251,13 +346,16 @@ export default function WorkspaceSearchPanel({
               No results found
             </p>
             <p className="mt-1 text-xs leading-relaxed text-[color:var(--muted)]">
-              Nothing in this workspace matches “{query.trim()}”.
+              {scope === "openFiles"
+                ? `Nothing in the open files matches “${query.trim()}”.`
+                : `Nothing in this folder matches “${query.trim()}”.`}
             </p>
           </div>
         ) : !searched ? (
           <div className="px-5 py-8 text-center text-xs leading-relaxed text-[color:var(--muted)]">
-            Type a word or phrase, then press Enter to search every supported
-            file in this folder.
+            {scope === "openFiles"
+              ? "Type a word or phrase, then press Enter to search the current contents of every open file."
+              : "Type a word or phrase, then press Enter to search every supported file in this folder."}
           </div>
         ) : (
           <div className="pb-3">
@@ -267,7 +365,7 @@ export default function WorkspaceSearchPanel({
             </div>
             {files.map((file) => (
               <details
-                key={file.path}
+                key={file.itemId ?? file.path ?? file.name}
                 open
                 className="group border-b border-[color:var(--border)]/75 [content-visibility:auto]"
               >
@@ -282,7 +380,7 @@ export default function WorkspaceSearchPanel({
                       </span>
                       <span
                         className="block truncate text-[10px] text-[color:var(--muted)]"
-                        title={file.path}
+                        title={file.path ?? file.relativePath}
                       >
                         {file.relativePath}
                       </span>
@@ -297,9 +395,7 @@ export default function WorkspaceSearchPanel({
                     <button
                       key={`${match.lineNumber}:${match.preview}`}
                       type="button"
-                      onClick={() =>
-                        onSelectResult(file.path, match.lineNumber)
-                      }
+                      onClick={() => onSelectResult(file, match.lineNumber)}
                       className="grid w-full grid-cols-[2.5rem_minmax(0,1fr)] gap-2 border-l-2 border-transparent px-3 py-1.5 text-left transition-colors hover:border-[color:var(--accent)] hover:bg-[color:var(--hover)] focus:outline-none focus-visible:border-[color:var(--accent)] focus-visible:bg-[color:var(--accent-soft)]"
                       title={`${file.relativePath}, line ${match.lineNumber}`}
                     >
