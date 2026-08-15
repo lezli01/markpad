@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   countWorkspaceSearchMatches,
+  DEFAULT_WORKSPACE_SEARCH_SCOPE,
   isWorkspaceSearchShortcut,
+  searchOpenFiles,
   type WorkspaceSearchFile,
 } from "./workspaceSearch";
 
@@ -16,6 +18,10 @@ const event = (overrides: Partial<KeyboardEvent> = {}) =>
   }) as KeyboardEvent;
 
 describe("workspace search shortcut", () => {
+  it("defaults global search to the open files scope", () => {
+    expect(DEFAULT_WORKSPACE_SEARCH_SCOPE).toBe("openFiles");
+  });
+
   it("accepts Ctrl+Shift+F and Command+Shift+F", () => {
     expect(
       isWorkspaceSearchShortcut(event({ ctrlKey: true, shiftKey: true })),
@@ -61,5 +67,62 @@ describe("workspace search result count", () => {
     ];
 
     expect(countWorkspaceSearchMatches(files)).toBe(3);
+  });
+});
+
+describe("open file search", () => {
+  it("searches live file contents case-insensitively and groups matching lines", () => {
+    const files = searchOpenFiles(
+      [
+        {
+          itemId: "item-1",
+          name: "notes.md",
+          path: "/notes/notes.md",
+          content: "First Needle\nno match\nsecond needle",
+        },
+        {
+          itemId: "item-2",
+          name: "Untitled-1",
+          path: null,
+          content: "NEEDLE in an unsaved draft",
+        },
+        {
+          itemId: "item-3",
+          name: "other.json",
+          path: "/notes/other.json",
+          content: '{"key": "different"}',
+        },
+      ],
+      " needle ",
+    );
+
+    expect(files).toHaveLength(2);
+    expect(files[0]).toMatchObject({
+      itemId: "item-1",
+      path: "/notes/notes.md",
+      relativePath: "/notes/notes.md",
+    });
+    expect(files[0].matches.map((match) => match.lineNumber)).toEqual([1, 3]);
+    expect(files[1]).toMatchObject({
+      itemId: "item-2",
+      path: null,
+      relativePath: "Unsaved draft",
+    });
+  });
+
+  it("returns no results for a blank query", () => {
+    expect(
+      searchOpenFiles(
+        [
+          {
+            itemId: "item-1",
+            name: "notes.md",
+            path: "/notes/notes.md",
+            content: "anything",
+          },
+        ],
+        "   ",
+      ),
+    ).toEqual([]);
   });
 });

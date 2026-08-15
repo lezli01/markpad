@@ -44,7 +44,7 @@ cloud, or a bare editor with no live preview at all.
 
 MarkPad is the small, local-first alternative — a native desktop app that opens
 quickly, keeps every file on your machine, and shows your Markdown rendered side
-by side as you type. A recent-files sidebar, folder-wide content search, a
+by side as you type. A recent-files sidebar, open-file and folder-wide search, a
 one-click formatting toolbar, light/dark theming, optional auto-save, and real OS
 file-association handling make it usable day to day, without the bloat.
 
@@ -60,11 +60,11 @@ side-by-side work:
 - **Live split-pane preview.** Edit Markdown in a line-numbered editor on the left, see it rendered on the right.
 - **Synced scrolling.** In split view the panes follow each other — scroll either one and the other tracks the same part of the document, staying aligned even across tall images and long code blocks.
 - **Find in the active document.** Use the toolbar magnifier or `Ctrl/⌘+F` to open MarkPad's own search bar instead of the webview's full-interface find. Every match is highlighted with a live position/count; `Enter` and `Shift+Enter` move forward and backward with wraparound, and `Escape` closes search. Searching from preview-only mode reveals the editor so the active match stays visible.
-- **Search text across a folder.** Open the dedicated search sidebar from the toolbar or with `Ctrl/⌘+Shift+F`, choose a workspace folder, and search every Markdown, JSON, and YAML file beneath it. Results are grouped by file with relative paths, matching line numbers, and text previews; selecting one opens the file and places the cursor on that line.
+- **Search across open files or a folder.** Open the dedicated search sidebar from the toolbar or with `Ctrl/⌘+Shift+F`. It searches every file currently open in MarkPad by default — including unsaved drafts and edits — or you can switch to a selected folder and scan every Markdown, JSON, and YAML file beneath it. Results are grouped by file with paths, matching line numbers, and text previews; selecting one activates the file and places the cursor on that line.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/search-dark.png">
-  <img src="docs/images/search-light.png" alt="MarkPad file search sidebar: the workspace picker and search field are ready to search Markdown, JSON, and YAML files, with the Search files toolbar button active">
+  <img src="docs/images/search-light.png" alt="MarkPad file search sidebar with Open files selected: a search for open file finds three matching lines across two unsaved drafts beside the editor and preview">
 </picture>
 
 - **In-document link navigation.** Headings get anchor ids, so clicking an in-page link in the preview — like a table of contents `[Section](#section)` — smooth-scrolls to that heading within the preview pane.
