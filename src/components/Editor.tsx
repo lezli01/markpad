@@ -40,6 +40,14 @@ import { runDataAction, type DataAction } from "../lib/dataActions";
 import { jsonTypingExtensions } from "../lib/jsonAutoEdit";
 import { yamlDiagnostics } from "../lib/yamlActions";
 import { yamlTypingExtensions } from "../lib/yamlAutoEdit";
+import {
+  clearDocumentSearch,
+  documentSearchExtension,
+  getDocumentSearchStatus,
+  moveDocumentSearch,
+  setDocumentSearch,
+  type SearchStatus,
+} from "../lib/documentSearch";
 
 export type EditorHandle = {
   getState(): EditorState;
@@ -48,6 +56,11 @@ export type EditorHandle = {
   applyScrollSnapshot(effect: StateEffect<unknown>): void;
   format(action: FormatAction): void;
   runDataAction(action: DataAction): void;
+  search(query: string): SearchStatus;
+  findNext(): SearchStatus;
+  findPrevious(): SearchStatus;
+  clearSearch(): void;
+  getSelectedText(): string;
   focus(): void;
   getScrollTop(): number;
   /** Source line shown at the top of the viewport, or null before mount. */
@@ -64,6 +77,10 @@ type EditorProps = {
       success so the app can clear a previously shown banner. The editor pane has
       no chrome of its own for messages. */
   onDataActionResult?: (error: string | null) => void;
+  /** Active app-level query, reapplied after an external document replacement. */
+  searchQuery?: string;
+  /** Keeps the find bar's match counter in sync while the document changes. */
+  onSearchResultChange?: (status: SearchStatus) => void;
   /** Fired on every scroll of the editor, user-driven or programmatic. */
   onScroll?: () => void;
 };
@@ -96,6 +113,14 @@ const editorTheme = EditorView.theme({
   },
   ".cm-cursor, .cm-dropCursor": {
     borderLeftColor: "var(--accent)",
+  },
+  ".cm-searchMatch": {
+    backgroundColor: "var(--accent-soft)",
+    borderRadius: "2px",
+    boxShadow: "inset 0 0 0 1px var(--accent)",
+  },
+  ".cm-searchMatch.cm-searchMatch-selected": {
+    backgroundColor: "var(--selection)",
   },
   "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection":
     {
@@ -190,6 +215,8 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     onChange,
     onActiveFormatsChange,
     onDataActionResult,
+    searchQuery,
+    onSearchResultChange,
     onScroll,
   },
   ref,
@@ -199,6 +226,8 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const onChangeRef = useRef(onChange);
   const onActiveFormatsChangeRef = useRef(onActiveFormatsChange);
   const onDataActionResultRef = useRef(onDataActionResult);
+  const searchQueryRef = useRef(searchQuery);
+  const onSearchResultChangeRef = useRef(onSearchResultChange);
   const onScrollRef = useRef(onScroll);
   const lastActiveKeyRef = useRef<string | null>(null);
 
@@ -213,6 +242,14 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   useEffect(() => {
     onDataActionResultRef.current = onDataActionResult;
   }, [onDataActionResult]);
+
+  useEffect(() => {
+    searchQueryRef.current = searchQuery;
+  }, [searchQuery]);
+
+  useEffect(() => {
+    onSearchResultChangeRef.current = onSearchResultChange;
+  }, [onSearchResultChange]);
 
   useEffect(() => {
     onScrollRef.current = onScroll;
@@ -313,6 +350,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         extensions: [
           history(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
+          documentSearchExtension,
           // Shared by every language; listed before perLanguageConf so the
           // number gutter stays left of the data languages' fold gutter.
           lineNumbers(),
@@ -325,6 +363,9 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
             }
             if (update.docChanged || update.selectionSet) {
               emitActiveFormats(update.state);
+              onSearchResultChangeRef.current?.(
+                getDocumentSearchStatus(update.state),
+              );
             }
           }),
         ],
@@ -358,6 +399,34 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         dispatchDataAction(view, action);
         // A toolbar click moves focus to the button; return it to the document.
         view.focus();
+      },
+      search: (query) => {
+        const view = viewRef.current;
+        return view
+          ? setDocumentSearch(view, query)
+          : { current: 0, total: 0 };
+      },
+      findNext: () => {
+        const view = viewRef.current;
+        return view
+          ? moveDocumentSearch(view, "next")
+          : { current: 0, total: 0 };
+      },
+      findPrevious: () => {
+        const view = viewRef.current;
+        return view
+          ? moveDocumentSearch(view, "previous")
+          : { current: 0, total: 0 };
+      },
+      clearSearch: () => {
+        const view = viewRef.current;
+        if (view) clearDocumentSearch(view);
+      },
+      getSelectedText: () => {
+        const view = viewRef.current;
+        if (!view) return "";
+        const { from, to } = view.state.selection.main;
+        return view.state.sliceDoc(from, to);
       },
       focus: () => viewRef.current?.focus(),
       getScrollTop: () => viewRef.current?.scrollDOM.scrollTop ?? 0,
@@ -437,6 +506,11 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     if (view.state.doc.toString() !== value) {
       view.setState(buildState(value, language));
       emitActiveFormats(view.state);
+      if (searchQueryRef.current) {
+        onSearchResultChangeRef.current?.(
+          setDocumentSearch(view, searchQueryRef.current),
+        );
+      }
     } else if (stateLanguage(view.state) !== language) {
       view.dispatch({
         effects: perLanguageConf.reconfigure(languageExtensions(language)),

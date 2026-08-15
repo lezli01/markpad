@@ -33,7 +33,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/markdown-dark.png">
-  <img src="docs/images/markdown-light.png" alt="MarkPad editing Markdown: a recent-files sidebar on the left with a modified file marked, the formatting toolbar and language toggle above a line-numbered editor pane, and the live preview rendering the same document on the right">
+  <img src="docs/images/markdown-light.png" alt="MarkPad searching a Markdown document: the in-app find bar shows one of three matches for preview, every match is highlighted in the line-numbered editor, and the live rendered preview appears alongside it">
 </picture>
 
 ## Why MarkPad?
@@ -59,6 +59,7 @@ side-by-side work:
 
 - **Live split-pane preview.** Edit Markdown in a line-numbered editor on the left, see it rendered on the right.
 - **Synced scrolling.** In split view the panes follow each other — scroll either one and the other tracks the same part of the document, staying aligned even across tall images and long code blocks.
+- **Find in the active document.** Use the toolbar magnifier or `Ctrl/⌘+F` to open MarkPad's own search bar instead of the webview's full-interface find. Every match is highlighted with a live position/count; `Enter` and `Shift+Enter` move forward and backward with wraparound, and `Escape` closes search. Searching from preview-only mode reveals the editor so the active match stays visible.
 - **In-document link navigation.** Headings get anchor ids, so clicking an in-page link in the preview — like a table of contents `[Section](#section)` — smooth-scrolls to that heading within the preview pane.
 - **Diagrams from fenced code.** A ` ```mermaid ` block renders as a diagram in the preview — flowcharts, sequence, class, state, ER, gantt, pie, mindmap, timeline, git graphs and the rest of [Mermaid](https://mermaid.js.org/)'s catalogue — and ` ```dot ` (or `graphviz`, `gv`) renders [Graphviz](https://graphviz.org/) DOT source. Both engines run entirely on your machine, follow the app's light/dark theme, and load only when a document actually has a diagram in it. Source that does not parse shows the engine's message inline with the block, so a half-typed diagram never blanks the preview.
 - **Formatting toolbar.** One-click Markdown formatting from the editor header — bold, italic, strikethrough, inline code, headings, bullet/numbered lists, quotes, links, images, code blocks, diagrams, tables, and horizontal rules — with shortcuts for the common ones (`Ctrl/⌘+B`, `+I`, `+E`, `+K`, and more). Buttons toggle the mark off when reapplied and light up to show the formatting at the cursor.
