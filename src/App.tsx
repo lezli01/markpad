@@ -11,6 +11,7 @@ import Toolbar from "./components/Toolbar";
 import ErrorBanner from "./components/ErrorBanner";
 import ExternalChangeBanner from "./components/ExternalChangeBanner";
 import RecentsPanel, { type RecentEntry } from "./components/RecentsPanel";
+import WorkspaceSearchPanel from "./components/WorkspaceSearchPanel";
 import ConfirmDialog from "./components/ConfirmDialog";
 import type { EditorHandle } from "./components/Editor";
 import type { PreviewHandle } from "./components/Preview";
@@ -18,6 +19,7 @@ import {
   openTextFile,
   openTextFileByPath,
   openTextFileByPathWithStamp,
+  openWorkspaceFolder,
   saveTextFile,
   saveTextFileAs,
   setWindowTitle,
@@ -47,6 +49,12 @@ import {
   isDocumentSearchShortcut,
   type SearchStatus,
 } from "./lib/documentSearch";
+import {
+  isWorkspaceSearchShortcut,
+  searchWorkspace,
+  type WorkspaceSearchFile,
+  type WorkspaceSearchStatus,
+} from "./lib/workspaceSearch";
 import {
   getAutoSave,
   getSidebarCollapsed,
@@ -97,6 +105,13 @@ type ItemSnapshot = {
   state: EditorState;
   scrollSnapshot: StateEffect<unknown>;
   previewScrollTop: number;
+};
+
+type SidebarView = "recents" | "workspaceSearch";
+
+type PendingLocation = {
+  path: string;
+  lineNumber: number;
 };
 
 const MAX_ITEMS = 50;
@@ -174,6 +189,8 @@ function EmptyState({ modKey }: { modKey: string }) {
           <span>Open file</span>
           <kbd className={kbdClass}>{modKey}+S</kbd>
           <span>Save current file</span>
+          <kbd className={kbdClass}>{modKey}+Shift+F</kbd>
+          <span>Search files in a folder</span>
         </div>
       </div>
     </div>
@@ -196,12 +213,27 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() =>
     getSidebarCollapsed(),
   );
+  const [sidebarView, setSidebarView] = useState<SidebarView>("recents");
   const [searchItemId, setSearchItemId] = useState<ItemId | null>(null);
   const [searchFocusRequest, setSearchFocusRequest] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchStatus, setSearchStatus] = useState<SearchStatus>(
     EMPTY_SEARCH_STATUS,
   );
+  const [workspaceRoot, setWorkspaceRoot] = useState<string | null>(null);
+  const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState("");
+  const [workspaceSearchFiles, setWorkspaceSearchFiles] = useState<
+    WorkspaceSearchFile[]
+  >([]);
+  const [workspaceSearchStatus, setWorkspaceSearchStatus] =
+    useState<WorkspaceSearchStatus>("idle");
+  const [workspaceSearchError, setWorkspaceSearchError] = useState<
+    string | null
+  >(null);
+  const [workspaceSearchFocusRequest, setWorkspaceSearchFocusRequest] =
+    useState(0);
+  const [pendingLocation, setPendingLocation] =
+    useState<PendingLocation | null>(null);
 
   const editorStatesRef = useRef<Map<ItemId, ItemSnapshot>>(new Map());
   const editorRef = useRef<EditorHandle>(null);
@@ -211,6 +243,7 @@ function App() {
   const activeIdRef = useRef<ItemId | null>(null);
   const sidebarWidthRef = useRef<number>(sidebarWidth);
   const activationSeqRef = useRef(0);
+  const workspaceSearchSeqRef = useRef(0);
   const activeCounterRef = useRef(1);
   // Guards the external-change sweep: focus events arrive in bursts (and from two
   // sources), and one pass at a time is enough.
@@ -235,6 +268,8 @@ function App() {
     activeItem !== null && (savingById[activeItem.id] ?? false);
   const saveEnabled = activeItem !== null && !activeSaving;
   const searchOpen = activeId !== null && searchItemId === activeId;
+  const workspaceSearchOpen =
+    !sidebarCollapsed && sidebarView === "workspaceSearch";
 
   const recentEntries = useMemo<RecentEntry[]>(
     () =>
@@ -461,6 +496,27 @@ function App() {
       previewRef.current?.setScrollTop(0);
     }
   }, [activeId]);
+
+  // A result can activate a lazily loaded file. Wait one frame after React has
+  // delivered the new document to CodeMirror, then place the caret at the
+  // matching source line and bring it into view.
+  useEffect(() => {
+    const location = pendingLocation;
+    if (
+      location === null ||
+      activeItem?.path !== location.path ||
+      !activeItem.loaded
+    ) {
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      editorRef.current?.revealLine(location.lineNumber);
+      setPendingLocation((current) =>
+        current === location ? null : current,
+      );
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [activeItem?.loaded, activeItem?.path, activeText, pendingLocation]);
 
   // Prune per-item bookkeeping for items no longer in the list.
   useEffect(() => {
@@ -750,7 +806,7 @@ function App() {
   // Add file references for OS-routed paths (pending/live). References are loaded
   // lazily; only the finally-activated item is read from disk here, so any read
   // error surfaces via loadItemFromDisk when that item becomes active.
-  async function openPaths(paths: string[]): Promise<void> {
+  async function openPaths(paths: string[]): Promise<ItemId | null> {
     let lastId: ItemId | null = null;
     for (const path of paths) {
       const existing = itemsRef.current.find((t) => t.path === path);
@@ -782,6 +838,7 @@ function App() {
     if (lastId !== null) {
       await activateItem(lastId);
     }
+    return lastId;
   }
 
   // Evict the least-recently-used clean files when over the cap. Modified items,
@@ -1024,6 +1081,77 @@ function App() {
     editorRef.current?.focus();
   }
 
+  function handleOpenWorkspaceSearch() {
+    setSidebarView("workspaceSearch");
+    if (sidebarCollapsed) {
+      setSidebarCollapsed(false);
+      persistSidebarCollapsed(false);
+    }
+    setWorkspaceSearchFocusRequest((request) => request + 1);
+  }
+
+  function handleCloseWorkspaceSearch() {
+    setSidebarView("recents");
+  }
+
+  async function handleChooseWorkspaceRoot() {
+    const result = await openWorkspaceFolder();
+    if (result.kind === "cancelled") return;
+    if (result.kind === "error") {
+      setWorkspaceSearchError(result.message);
+      return;
+    }
+
+    workspaceSearchSeqRef.current++;
+    setWorkspaceRoot(result.path);
+    setWorkspaceSearchFiles([]);
+    setWorkspaceSearchStatus("idle");
+    setWorkspaceSearchError(null);
+    setWorkspaceSearchFocusRequest((request) => request + 1);
+  }
+
+  function handleWorkspaceSearchQueryChange(next: string) {
+    workspaceSearchSeqRef.current++;
+    setWorkspaceSearchQuery(next);
+    setWorkspaceSearchFiles([]);
+    setWorkspaceSearchStatus("idle");
+    setWorkspaceSearchError(null);
+  }
+
+  async function handleRunWorkspaceSearch() {
+    const rootPath = workspaceRoot;
+    const query = workspaceSearchQuery.trim();
+    if (rootPath === null || query.length === 0) return;
+
+    const sequence = ++workspaceSearchSeqRef.current;
+    setWorkspaceSearchStatus("searching");
+    setWorkspaceSearchError(null);
+    const result = await searchWorkspace(rootPath, query);
+    if (sequence !== workspaceSearchSeqRef.current) return;
+
+    if (result.kind === "ok") {
+      setWorkspaceSearchFiles(result.files);
+      setWorkspaceSearchStatus("complete");
+    } else {
+      setWorkspaceSearchFiles([]);
+      setWorkspaceSearchStatus("idle");
+      setWorkspaceSearchError(result.message);
+    }
+  }
+
+  async function handleWorkspaceSearchResult(
+    path: string,
+    lineNumber: number,
+  ) {
+    if (viewMode !== "editor") {
+      handleSetViewMode("editor");
+    }
+    const openedId = await openPaths([path]);
+    if (openedId !== null) {
+      setPendingLocation({ path, lineNumber });
+    }
+  }
+
   function handleSetLanguage(language: DocumentLanguage) {
     const id = activeIdRef.current;
     if (id === null) return;
@@ -1076,6 +1204,7 @@ function App() {
   const handleOpenFileRef = useRef(handleOpenFile);
   const handleToggleSidebarRef = useRef(handleToggleSidebar);
   const handleOpenSearchRef = useRef(handleOpenSearch);
+  const handleOpenWorkspaceSearchRef = useRef(handleOpenWorkspaceSearch);
   const handleCloseSearchRef = useRef(handleCloseSearch);
   const checkAgainstDiskRef = useRef(checkOpenFilesAgainstDisk);
 
@@ -1085,6 +1214,7 @@ function App() {
     handleOpenFileRef.current = handleOpenFile;
     handleToggleSidebarRef.current = handleToggleSidebar;
     handleOpenSearchRef.current = handleOpenSearch;
+    handleOpenWorkspaceSearchRef.current = handleOpenWorkspaceSearch;
     handleCloseSearchRef.current = handleCloseSearch;
     checkAgainstDiskRef.current = checkOpenFilesAgainstDisk;
   });
@@ -1110,6 +1240,12 @@ function App() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      if (isWorkspaceSearchShortcut(e)) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleOpenWorkspaceSearchRef.current();
+        return;
+      }
       if (isDocumentSearchShortcut(e)) {
         e.preventDefault();
         e.stopPropagation();
@@ -1166,18 +1302,36 @@ function App() {
             style={{ width: sidebarWidth }}
             className="shrink-0 h-full overflow-hidden bg-[color:var(--panel)]"
           >
-            <RecentsPanel
-              items={recentEntries}
-              activeId={activeId}
-              onActivate={(id) => void activateItem(id)}
-              onRemove={handleRemove}
-              onRemoveMany={handleRemoveMany}
-            />
+            {sidebarView === "recents" ? (
+              <RecentsPanel
+                items={recentEntries}
+                activeId={activeId}
+                onActivate={(id) => void activateItem(id)}
+                onRemove={handleRemove}
+                onRemoveMany={handleRemoveMany}
+              />
+            ) : (
+              <WorkspaceSearchPanel
+                rootPath={workspaceRoot}
+                query={workspaceSearchQuery}
+                files={workspaceSearchFiles}
+                status={workspaceSearchStatus}
+                error={workspaceSearchError}
+                focusRequest={workspaceSearchFocusRequest}
+                onChooseFolder={() => void handleChooseWorkspaceRoot()}
+                onQueryChange={handleWorkspaceSearchQueryChange}
+                onSearch={() => void handleRunWorkspaceSearch()}
+                onSelectResult={(path, lineNumber) =>
+                  void handleWorkspaceSearchResult(path, lineNumber)
+                }
+                onClose={handleCloseWorkspaceSearch}
+              />
+            )}
           </aside>
           <div
             role="separator"
             aria-orientation="vertical"
-            aria-label="Resize recent files panel"
+            aria-label="Resize sidebar"
             onPointerDown={startResize}
             style={{ touchAction: "none" }}
             className="relative w-px shrink-0 cursor-col-resize bg-[color:var(--border)] transition-colors hover:bg-[color:var(--accent)] before:absolute before:inset-y-0 before:-left-1 before:-right-1 before:content-['']"
@@ -1194,12 +1348,14 @@ function App() {
           autoSave={autoSave}
           sidebarCollapsed={sidebarCollapsed}
           searchEnabled={activeItem !== null}
+          workspaceSearchOpen={workspaceSearchOpen}
           modKey={modKey}
           onToggleSidebar={handleToggleSidebar}
           onNewFile={handleNewFile}
           onOpenFile={handleOpenFile}
           onSave={handleSave}
           onFind={handleOpenSearch}
+          onSearchFiles={handleOpenWorkspaceSearch}
           onToggleAutoSave={handleToggleAutoSave}
           onSetViewMode={handleSetViewMode}
           onToggleTheme={handleToggleTheme}

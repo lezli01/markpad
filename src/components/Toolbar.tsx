@@ -11,12 +11,14 @@ type ToolbarProps = {
   autoSave: boolean;
   sidebarCollapsed: boolean;
   searchEnabled: boolean;
+  workspaceSearchOpen: boolean;
   modKey: string;
   onToggleSidebar: () => void;
   onNewFile: () => void;
   onOpenFile: () => void;
   onSave: () => void;
   onFind: () => void;
+  onSearchFiles: () => void;
   onToggleAutoSave: (next: boolean) => void;
   onSetViewMode: (mode: ViewMode) => void;
   onToggleTheme: () => void;
@@ -175,6 +177,26 @@ function SearchIcon() {
   );
 }
 
+function SearchFilesIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3.5 6.5A2.5 2.5 0 0 1 6 4h3.4l2 2H18a2.5 2.5 0 0 1 2.5 2.5v2" />
+      <circle cx="14.5" cy="15" r="4" />
+      <path d="m17.5 18 3 3" />
+    </svg>
+  );
+}
+
 const segments: ReadonlyArray<{ mode: ViewMode; label: string }> = [
   { mode: "editor", label: "Editor" },
   { mode: "split", label: "Split" },
@@ -195,12 +217,14 @@ export default function Toolbar({
   autoSave,
   sidebarCollapsed,
   searchEnabled,
+  workspaceSearchOpen,
   modKey,
   onToggleSidebar,
   onNewFile,
   onOpenFile,
   onSave,
   onFind,
+  onSearchFiles,
   onToggleAutoSave,
   onSetViewMode,
   onToggleTheme,
@@ -208,8 +232,8 @@ export default function Toolbar({
   const themeLabel =
     theme === "light" ? "Switch to dark theme" : "Switch to light theme";
   const sidebarLabel = sidebarCollapsed
-    ? "Show recent files (Ctrl+\\)"
-    : "Hide recent files (Ctrl+\\)";
+    ? "Show sidebar (Ctrl+\\)"
+    : "Hide sidebar (Ctrl+\\)";
   return (
     <div className={toolbarShell} role="toolbar" aria-label="Workspace controls">
       <button
@@ -223,6 +247,21 @@ export default function Toolbar({
         <PanelLeftIcon />
       </button>
       <span className={toolbarDivider} aria-hidden="true" />
+      <button
+        type="button"
+        className={`${iconButton}${
+          workspaceSearchOpen
+            ? " bg-[color:var(--accent-soft)] text-[color:var(--accent)]"
+            : ""
+        }`}
+        aria-label={`Search files (${modKey}+Shift+F)`}
+        aria-keyshortcuts="Control+Shift+F Meta+Shift+F"
+        aria-pressed={workspaceSearchOpen}
+        title={`Search files (${modKey}+Shift+F)`}
+        onClick={onSearchFiles}
+      >
+        <SearchFilesIcon />
+      </button>
       <button
         type="button"
         className={iconButton}
