@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.13.0](https://github.com/lezli01/markpad/compare/v0.12.0...v0.13.0) (2026-08-15)
+
+
+### Features
+
+* add selectable global search scope ([c9e233f](https://github.com/lezli01/markpad/commit/c9e233f1e90f4de98b94d78505ed79c34b35c6a5))
+* add selectable global search scope ([d2fc102](https://github.com/lezli01/markpad/commit/d2fc1029f41a353fd5bc545032629a0bb1b5c2da))
+
 ## [0.12.0](https://github.com/lezli01/markpad/compare/v0.11.0...v0.12.0) (2026-08-15)
 
 
