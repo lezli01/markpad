@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.12.0](https://github.com/lezli01/markpad/compare/v0.11.0...v0.12.0) (2026-08-15)
+
+
+### Features
+
+* add in-document search ([7e6fbf0](https://github.com/lezli01/markpad/commit/7e6fbf077d48fe2131e76170aba9bd96c8543128))
+* add in-document search ([8d3189f](https://github.com/lezli01/markpad/commit/8d3189f1ab349dcbf2801b1eaa7d79c7c4b6de45))
+* add workspace file search ([f1a8c2e](https://github.com/lezli01/markpad/commit/f1a8c2e7d9c62e8998aeffae529bcfa46559a973))
+* search text across files ([6f2438f](https://github.com/lezli01/markpad/commit/6f2438f53322352f88ce343e88a62f3163374929))
+
 ## [0.11.0](https://github.com/lezli01/markpad/compare/v0.10.0...v0.11.0) (2026-08-11)
 
 
