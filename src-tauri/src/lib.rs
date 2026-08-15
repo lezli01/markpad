@@ -1,5 +1,6 @@
 mod launch_files;
 mod session;
+mod workspace_search;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -29,7 +30,8 @@ pub fn run() {
             launch_files::write_text_file_by_path,
             launch_files::stat_text_file_by_path,
             session::load_session,
-            session::save_session
+            session::save_session,
+            workspace_search::search_workspace
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

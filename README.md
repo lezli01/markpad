@@ -10,7 +10,7 @@
 
 <p align="center">
   Edit Markdown on the left, see it rendered on the right — with a recent-files<br>
-  sidebar, a formatting toolbar, JSON and YAML editing, light/dark theming, auto-save,<br>
+  sidebar, workspace search, JSON and YAML editing, light/dark theming, auto-save,<br>
   and OS file-association handling, in a small native <code>Tauri</code> app for Windows, Linux, and macOS.
 </p>
 
@@ -44,9 +44,9 @@ cloud, or a bare editor with no live preview at all.
 
 MarkPad is the small, local-first alternative — a native desktop app that opens
 quickly, keeps every file on your machine, and shows your Markdown rendered side
-by side as you type. A recent-files sidebar, a one-click formatting toolbar,
-light/dark theming, optional auto-save, and real OS file-association handling make
-it usable day to day, without the bloat.
+by side as you type. A recent-files sidebar, folder-wide content search, a
+one-click formatting toolbar, light/dark theming, optional auto-save, and real OS
+file-association handling make it usable day to day, without the bloat.
 
 It is released under the [MIT License](LICENSE) and created by `lezli01` at
 [lezli01.is-a.dev](https://lezli01.is-a.dev). Contributions are welcome — see
@@ -60,6 +60,13 @@ side-by-side work:
 - **Live split-pane preview.** Edit Markdown in a line-numbered editor on the left, see it rendered on the right.
 - **Synced scrolling.** In split view the panes follow each other — scroll either one and the other tracks the same part of the document, staying aligned even across tall images and long code blocks.
 - **Find in the active document.** Use the toolbar magnifier or `Ctrl/⌘+F` to open MarkPad's own search bar instead of the webview's full-interface find. Every match is highlighted with a live position/count; `Enter` and `Shift+Enter` move forward and backward with wraparound, and `Escape` closes search. Searching from preview-only mode reveals the editor so the active match stays visible.
+- **Search text across a folder.** Open the dedicated search sidebar from the toolbar or with `Ctrl/⌘+Shift+F`, choose a workspace folder, and search every Markdown, JSON, and YAML file beneath it. Results are grouped by file with relative paths, matching line numbers, and text previews; selecting one opens the file and places the cursor on that line.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/search-dark.png">
+  <img src="docs/images/search-light.png" alt="MarkPad file search sidebar: the workspace picker and search field are ready to search Markdown, JSON, and YAML files, with the Search files toolbar button active">
+</picture>
+
 - **In-document link navigation.** Headings get anchor ids, so clicking an in-page link in the preview — like a table of contents `[Section](#section)` — smooth-scrolls to that heading within the preview pane.
 - **Diagrams from fenced code.** A ` ```mermaid ` block renders as a diagram in the preview — flowcharts, sequence, class, state, ER, gantt, pie, mindmap, timeline, git graphs and the rest of [Mermaid](https://mermaid.js.org/)'s catalogue — and ` ```dot ` (or `graphviz`, `gv`) renders [Graphviz](https://graphviz.org/) DOT source. Both engines run entirely on your machine, follow the app's light/dark theme, and load only when a document actually has a diagram in it. Source that does not parse shows the engine's message inline with the block, so a half-typed diagram never blanks the preview.
 - **Formatting toolbar.** One-click Markdown formatting from the editor header — bold, italic, strikethrough, inline code, headings, bullet/numbered lists, quotes, links, images, code blocks, diagrams, tables, and horizontal rules — with shortcuts for the common ones (`Ctrl/⌘+B`, `+I`, `+E`, `+K`, and more). Buttons toggle the mark off when reapplied and light up to show the formatting at the cursor.
@@ -87,7 +94,7 @@ side-by-side work:
 
 - **Recent files sidebar.** A left-hand panel lists up to 50 recently opened items — most-recent first, with modified files pinned to the top and marked. Click one to open it; modified and untitled documents keep their unsaved edits, cursor, and scroll position.
 - **Recents context menu.** Right-click an entry for its full path, Copy full path, Copy file name, Reveal in file manager, and the bulk closes — Close, Close others, Close all above, Close all below, Close all saved, and Close all. Bulk closes skip anything with unsaved edits, so they never open a prompt and never lose a draft; each entry shows how many items it would close and greys out at zero.
-- **Collapsible, resizable sidebar.** Drag the divider to resize the recents panel, or hide it entirely for distraction-free writing with the toolbar toggle or `Ctrl+\`; the width and collapsed state persist.
+- **Collapsible, resizable sidebar.** Drag the divider to resize the recent-files or search panel, or hide it entirely for distraction-free writing with the toolbar toggle or `Ctrl+\`; the width and collapsed state persist.
 - **New empty file.** Start a fresh Markdown document from the toolbar or `Ctrl+N` / `⌘N`; it appears in the recents list as an untitled draft, and the first Save prompts for a path.
 - **Light and dark theme.** Honors the operating system's appearance preference by default, with a manual toggle in the toolbar.
 - **Open files from disk.** Native file picker biased toward `.md`, `.markdown`, `.json`, `.yaml`, and `.yml`, with a fallback to all files.
@@ -145,6 +152,7 @@ npm run dev
 Frontend:
 
 ```sh
+npm test
 npm run lint
 npm run build
 ```
@@ -155,13 +163,14 @@ Rust / Tauri (from `src-tauri/`):
 cargo fmt --all --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo check --all-targets --all-features
+cargo test
 ```
 
 ## Project Layout
 
 ```text
-src/             React + TypeScript UI (editor, preview, workspace, toolbar, recents panel)
-src-tauri/       Rust crate that hosts the Tauri desktop runtime
+src/             React + TypeScript UI (editor, preview, workspace, toolbar, recents/search panels)
+src-tauri/       Rust crate for the Tauri runtime, sessions, file routing, and workspace search
 specs/           Feature specifications (one folder per feature)
 docs/            Architecture notes and supporting docs
 ```
@@ -178,9 +187,10 @@ application-data directory; nothing is sent over the network.
 
 Early development, but already usable day-to-day. The split-pane workspace, the
 recent-files sidebar with draft persistence, file open/save, view modes, theming,
-auto-save, JSON and YAML editing with formatting and folding, OS file-association
-handling, single-instance routing, outside-edit detection, and session restore are
-working today. Specs for shipped and in-progress features live under
+auto-save, folder-wide content search, JSON and YAML editing with formatting and
+folding, OS file-association handling, single-instance routing, outside-edit
+detection, and session restore are working today. Specs for shipped and
+in-progress features live under
 [`specs/`](specs); open issues and follow-ups are in the
 [issue tracker](https://github.com/lezli01/markpad/issues).
 

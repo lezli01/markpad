@@ -62,6 +62,7 @@ export type EditorHandle = {
   clearSearch(): void;
   getSelectedText(): string;
   focus(): void;
+  revealLine(lineNumber: number): void;
   getScrollTop(): number;
   /** Source line shown at the top of the viewport, or null before mount. */
   getSyncLine(): number | null;
@@ -429,6 +430,18 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         return view.state.sliceDoc(from, to);
       },
       focus: () => viewRef.current?.focus(),
+      revealLine: (lineNumber) => {
+        const view = viewRef.current;
+        if (!view) return;
+        const line = view.state.doc.line(
+          Math.min(view.state.doc.lines, Math.max(1, lineNumber)),
+        );
+        view.dispatch({
+          selection: { anchor: line.from },
+          effects: EditorView.scrollIntoView(line.from, { y: "center" }),
+        });
+        view.focus();
+      },
       getScrollTop: () => viewRef.current?.scrollDOM.scrollTop ?? 0,
       // CodeMirror measures block geometry relative to the document's top,
       // which moves as the scroller scrolls. `documentTop` is that origin in

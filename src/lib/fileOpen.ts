@@ -58,6 +58,11 @@ export type SaveAsResult =
   | { kind: "cancelled" }
   | { kind: "error"; message: string };
 
+export type OpenFolderResult =
+  | { kind: "ok"; path: string }
+  | { kind: "cancelled" }
+  | { kind: "error"; message: string };
+
 function basename(path: string): string {
   const normalized = path.replace(/\\/g, "/");
   const idx = normalized.lastIndexOf("/");
@@ -197,6 +202,29 @@ export async function openTextFile(): Promise<OpenResult> {
     console.warn("Failed to read file:", err);
     return { kind: "error", message: friendlyMessage(err) };
   }
+}
+
+/** Pick the explicit root used by workspace-wide content search. Keeping the
+ * dialog here preserves fileOpen.ts as the app's single dialog/fs chokepoint. */
+export async function openWorkspaceFolder(): Promise<OpenFolderResult> {
+  let picked: string | string[] | null;
+  try {
+    picked = await open({ multiple: false, directory: true });
+  } catch (error) {
+    console.warn("Open folder dialog failed:", error);
+    return {
+      kind: "error",
+      message: "Could not open the folder picker. Please try again.",
+    };
+  }
+
+  if (picked === null) {
+    return { kind: "cancelled" };
+  }
+  const path = Array.isArray(picked) ? picked[0] : picked;
+  return typeof path === "string" && path.length > 0
+    ? { kind: "ok", path }
+    : { kind: "cancelled" };
 }
 
 export async function saveTextFile(
