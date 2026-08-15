@@ -43,6 +43,11 @@ import {
   type DocumentLanguage,
 } from "./lib/documentLanguage";
 import {
+  EMPTY_SEARCH_STATUS,
+  isDocumentSearchShortcut,
+  type SearchStatus,
+} from "./lib/documentSearch";
+import {
   getAutoSave,
   getSidebarCollapsed,
   getSidebarWidth,
@@ -191,6 +196,12 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() =>
     getSidebarCollapsed(),
   );
+  const [searchItemId, setSearchItemId] = useState<ItemId | null>(null);
+  const [searchFocusRequest, setSearchFocusRequest] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchStatus, setSearchStatus] = useState<SearchStatus>(
+    EMPTY_SEARCH_STATUS,
+  );
 
   const editorStatesRef = useRef<Map<ItemId, ItemSnapshot>>(new Map());
   const editorRef = useRef<EditorHandle>(null);
@@ -223,6 +234,7 @@ function App() {
   const activeSaving =
     activeItem !== null && (savingById[activeItem.id] ?? false);
   const saveEnabled = activeItem !== null && !activeSaving;
+  const searchOpen = activeId !== null && searchItemId === activeId;
 
   const recentEntries = useMemo<RecentEntry[]>(
     () =>
@@ -257,6 +269,9 @@ function App() {
     activationSeqRef.current++;
     const prevId = activeIdRef.current;
     if (prevId === null) return;
+    editorRef.current?.clearSearch();
+    setSearchItemId(null);
+    setSearchStatus(EMPTY_SEARCH_STATUS);
     const prev = itemsRef.current.find((t) => t.id === prevId);
     const willRelease =
       prev != null && prev.kind === "file" && prev.text === prev.savedText;
@@ -894,6 +909,9 @@ function App() {
       return out;
     });
     if (activeWasRemoved) {
+      editorRef.current?.clearSearch();
+      setSearchItemId(null);
+      setSearchStatus(EMPTY_SEARCH_STATUS);
       // Fall through to the closest survivor in display order: down first, then
       // up — a batch close can wipe out several neighbours at once.
       const idx = displayed.findIndex((t) => t.id === activeIdRef.current);
@@ -966,6 +984,46 @@ function App() {
     persistViewMode(mode);
   }
 
+  function handleOpenSearch() {
+    if (activeItem === null) return;
+    if (!isDataLanguage(activeLanguage) && viewMode === "preview") {
+      handleSetViewMode("editor");
+    }
+    const selected = searchOpen
+      ? ""
+      : (editorRef.current?.getSelectedText() ?? "");
+    const nextQuery =
+      selected.length <= 200 && !selected.includes("\n")
+        ? selected || searchQuery
+        : searchQuery;
+    setSearchQuery(nextQuery);
+    setSearchStatus(
+      editorRef.current?.search(nextQuery) ?? EMPTY_SEARCH_STATUS,
+    );
+    setSearchItemId(activeItem.id);
+    setSearchFocusRequest((request) => request + 1);
+  }
+
+  function handleSearchQueryChange(next: string) {
+    setSearchQuery(next);
+    setSearchStatus(editorRef.current?.search(next) ?? EMPTY_SEARCH_STATUS);
+  }
+
+  function handleFindNext() {
+    setSearchStatus(editorRef.current?.findNext() ?? EMPTY_SEARCH_STATUS);
+  }
+
+  function handleFindPrevious() {
+    setSearchStatus(editorRef.current?.findPrevious() ?? EMPTY_SEARCH_STATUS);
+  }
+
+  function handleCloseSearch() {
+    editorRef.current?.clearSearch();
+    setSearchItemId(null);
+    setSearchStatus(EMPTY_SEARCH_STATUS);
+    editorRef.current?.focus();
+  }
+
   function handleSetLanguage(language: DocumentLanguage) {
     const id = activeIdRef.current;
     if (id === null) return;
@@ -1017,6 +1075,8 @@ function App() {
   const handleNewFileRef = useRef(handleNewFile);
   const handleOpenFileRef = useRef(handleOpenFile);
   const handleToggleSidebarRef = useRef(handleToggleSidebar);
+  const handleOpenSearchRef = useRef(handleOpenSearch);
+  const handleCloseSearchRef = useRef(handleCloseSearch);
   const checkAgainstDiskRef = useRef(checkOpenFilesAgainstDisk);
 
   useEffect(() => {
@@ -1024,6 +1084,8 @@ function App() {
     handleNewFileRef.current = handleNewFile;
     handleOpenFileRef.current = handleOpenFile;
     handleToggleSidebarRef.current = handleToggleSidebar;
+    handleOpenSearchRef.current = handleOpenSearch;
+    handleCloseSearchRef.current = handleCloseSearch;
     checkAgainstDiskRef.current = checkOpenFilesAgainstDisk;
   });
 
@@ -1048,6 +1110,12 @@ function App() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      if (isDocumentSearchShortcut(e)) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleOpenSearchRef.current();
+        return;
+      }
       const mod = e.ctrlKey || e.metaKey;
       if (!mod || e.shiftKey || e.altKey) return;
       const key = e.key.toLowerCase();
@@ -1065,9 +1133,21 @@ function App() {
         handleToggleSidebarRef.current();
       }
     }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
   }, []);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    function onEscape(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      e.stopPropagation();
+      handleCloseSearchRef.current();
+    }
+    window.addEventListener("keydown", onEscape, true);
+    return () => window.removeEventListener("keydown", onEscape, true);
+  }, [searchOpen]);
 
   const pendingRemoveItem =
     items.find((t) => t.id === pendingRemove) ?? null;
@@ -1113,10 +1193,13 @@ function App() {
           saving={activeSaving}
           autoSave={autoSave}
           sidebarCollapsed={sidebarCollapsed}
+          searchEnabled={activeItem !== null}
+          modKey={modKey}
           onToggleSidebar={handleToggleSidebar}
           onNewFile={handleNewFile}
           onOpenFile={handleOpenFile}
           onSave={handleSave}
+          onFind={handleOpenSearch}
           onToggleAutoSave={handleToggleAutoSave}
           onSetViewMode={handleSetViewMode}
           onToggleTheme={handleToggleTheme}
@@ -1148,6 +1231,15 @@ function App() {
               onDataActionResult={setError}
               onLanguageChange={handleSetLanguage}
               modKey={modKey}
+              searchOpen={searchOpen}
+              searchFocusRequest={searchFocusRequest}
+              searchQuery={searchQuery}
+              searchStatus={searchStatus}
+              onSearchQueryChange={handleSearchQueryChange}
+              onFindNext={handleFindNext}
+              onFindPrevious={handleFindPrevious}
+              onSearchResultChange={setSearchStatus}
+              onCloseSearch={handleCloseSearch}
               editorRef={editorRef}
               previewRef={previewRef}
             />

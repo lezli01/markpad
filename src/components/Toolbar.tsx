@@ -10,10 +10,13 @@ type ToolbarProps = {
   saving: boolean;
   autoSave: boolean;
   sidebarCollapsed: boolean;
+  searchEnabled: boolean;
+  modKey: string;
   onToggleSidebar: () => void;
   onNewFile: () => void;
   onOpenFile: () => void;
   onSave: () => void;
+  onFind: () => void;
   onToggleAutoSave: (next: boolean) => void;
   onSetViewMode: (mode: ViewMode) => void;
   onToggleTheme: () => void;
@@ -34,7 +37,7 @@ const segmentBase =
 const segmentActive = "bg-[color:var(--accent-soft)] text-[color:var(--accent)]";
 
 const iconButton =
-  "inline-flex items-center justify-center rounded-md p-1.5 text-[color:var(--muted)] bg-transparent hover:text-[color:var(--text)] hover:bg-[color:var(--hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] transition-colors";
+  "inline-flex items-center justify-center rounded-md p-1.5 text-[color:var(--muted)] bg-transparent hover:text-[color:var(--text)] hover:bg-[color:var(--hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] transition-colors disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-[color:var(--muted)]";
 
 const toolbarDivider = "mx-1 h-6 w-px bg-[color:var(--border)]";
 
@@ -154,6 +157,24 @@ function PanelLeftIcon() {
   );
 }
 
+function SearchIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+    >
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m16 16 4 4" />
+    </svg>
+  );
+}
+
 const segments: ReadonlyArray<{ mode: ViewMode; label: string }> = [
   { mode: "editor", label: "Editor" },
   { mode: "split", label: "Split" },
@@ -173,10 +194,13 @@ export default function Toolbar({
   saving,
   autoSave,
   sidebarCollapsed,
+  searchEnabled,
+  modKey,
   onToggleSidebar,
   onNewFile,
   onOpenFile,
   onSave,
+  onFind,
   onToggleAutoSave,
   onSetViewMode,
   onToggleTheme,
@@ -199,6 +223,17 @@ export default function Toolbar({
         <PanelLeftIcon />
       </button>
       <span className={toolbarDivider} aria-hidden="true" />
+      <button
+        type="button"
+        className={iconButton}
+        disabled={!searchEnabled}
+        aria-label={`Find in document (${modKey}+F)`}
+        aria-keyshortcuts="Control+F Meta+F"
+        title={`Find in document (${modKey}+F)`}
+        onClick={onFind}
+      >
+        <SearchIcon />
+      </button>
       <button type="button" className={buttonBase} onClick={onNewFile}>
         <NewFileIcon />
         <span>New</span>

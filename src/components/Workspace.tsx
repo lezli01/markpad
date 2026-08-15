@@ -1,8 +1,14 @@
-import { useCallback, useRef, useState, type RefObject } from "react";
+import {
+  useCallback,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import Editor, { type EditorHandle } from "./Editor";
 import Preview, { type PreviewHandle } from "./Preview";
 import FormatToolbar from "./FormatToolbar";
 import DataToolbar from "./DataToolbar";
+import SearchBar from "./SearchBar";
 import type { FormatAction } from "../lib/formatActions";
 import type { DataAction } from "../lib/dataActions";
 import {
@@ -12,6 +18,7 @@ import {
   type DocumentLanguage,
 } from "../lib/documentLanguage";
 import type { Theme, ViewMode } from "../lib/preferences";
+import type { SearchStatus } from "../lib/documentSearch";
 
 type WorkspaceProps = {
   text: string;
@@ -27,6 +34,15 @@ type WorkspaceProps = {
   onDataActionResult: (error: string | null) => void;
   onLanguageChange: (language: DocumentLanguage) => void;
   modKey: string;
+  searchOpen: boolean;
+  searchFocusRequest: number;
+  searchQuery: string;
+  searchStatus: SearchStatus;
+  onSearchQueryChange: (query: string) => void;
+  onFindNext: () => void;
+  onFindPrevious: () => void;
+  onSearchResultChange: (status: SearchStatus) => void;
+  onCloseSearch: () => void;
   /** Ref objects (not callback refs): scroll sync reads both handles here. */
   editorRef?: RefObject<EditorHandle | null>;
   previewRef?: RefObject<PreviewHandle | null>;
@@ -69,6 +85,15 @@ export default function Workspace({
   onDataActionResult,
   onLanguageChange,
   modKey,
+  searchOpen,
+  searchFocusRequest,
+  searchQuery,
+  searchStatus,
+  onSearchQueryChange,
+  onFindNext,
+  onFindPrevious,
+  onSearchResultChange,
+  onCloseSearch,
   editorRef,
   previewRef,
 }: WorkspaceProps) {
@@ -140,8 +165,8 @@ export default function Workspace({
   );
 
   const layoutClass = isSplit
-    ? "flex flex-col md:flex-row h-full"
-    : "flex flex-col h-full";
+    ? "flex flex-1 min-h-0 flex-col md:flex-row"
+    : "flex flex-1 min-h-0 flex-col";
 
   // The divider lives on the preview pane and only appears in split view, so a
   // single visible pane never shows a stray edge line.
@@ -150,81 +175,99 @@ export default function Workspace({
     : "";
 
   return (
-    <div className={layoutClass}>
-      <section
-        className={`${pane}${editorHidden ? " hidden" : ""}`}
-        aria-label="Editor"
-      >
-        <div className={paneHeader}>
-          <span className={paneLabel}>Editor</span>
-          <div className="flex min-w-0 items-center gap-2">
-            {/* Toolbar stays a single row and scrolls sideways when the pane is
-                too narrow, so the header height (and its border) never shifts.
-                p-1 keeps each button's focus ring from being clipped by the
-                scroll container; the wheel handler lets a plain vertical mouse
-                wheel reach the toolbar while its scrollbar is hidden. */}
-            <div
-              className="min-w-0 overflow-x-auto no-scrollbar p-1"
-              onWheel={(e) => {
-                if (e.deltaY !== 0 && e.deltaX === 0) {
-                  e.currentTarget.scrollLeft += e.deltaY;
-                }
-              }}
-            >
-              {isData ? (
-                <DataToolbar language={language} onAction={onDataAction} />
-              ) : (
-                <FormatToolbar
-                  onFormat={onFormat}
-                  modKey={modKey}
-                  activeFormats={activeFormats}
-                />
-              )}
-            </div>
-            <select
-              className={languageSelect}
-              aria-label="Document language"
-              title="Document language"
-              value={language}
-              onChange={(e) =>
-                onLanguageChange(e.target.value as DocumentLanguage)
-              }
-            >
-              {DOCUMENT_LANGUAGES.map((option) => (
-                <option key={option} className={languageOption} value={option}>
-                  {LANGUAGE_LABELS[option]}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="flex-1 min-h-0 px-4 py-2">
-          <Editor
-            ref={editorRef}
-            value={text}
-            language={language}
-            onChange={onTextChange}
-            onActiveFormatsChange={setActiveFormats}
-            onDataActionResult={onDataActionResult}
-            onScroll={handleEditorScroll}
-          />
-        </div>
-      </section>
-      {previewMounted && (
-        <section className={`${pane}${previewDivider}`} aria-label="Preview">
+    <div className="flex h-full min-h-0 flex-col">
+      {searchOpen && (
+        <SearchBar
+          query={searchQuery}
+          status={searchStatus}
+          modKey={modKey}
+          focusRequest={searchFocusRequest}
+          onQueryChange={onSearchQueryChange}
+          onNext={onFindNext}
+          onPrevious={onFindPrevious}
+          onClose={onCloseSearch}
+        />
+      )}
+      <div className={layoutClass}>
+        <section
+          className={`${pane}${editorHidden ? " hidden" : ""}`}
+          aria-label="Editor"
+        >
           <div className={paneHeader}>
-            <span className={paneLabel}>Preview</span>
+            <span className={paneLabel}>Editor</span>
+            <div className="flex min-w-0 items-center gap-2">
+              {/* Toolbar stays a single row and scrolls sideways when the pane is
+                  too narrow, so the header height (and its border) never shifts.
+                  p-1 keeps each button's focus ring from being clipped by the
+                  scroll container; the wheel handler lets a plain vertical mouse
+                  wheel reach the toolbar while its scrollbar is hidden. */}
+              <div
+                className="min-w-0 overflow-x-auto no-scrollbar p-1"
+                onWheel={(e) => {
+                  if (e.deltaY !== 0 && e.deltaX === 0) {
+                    e.currentTarget.scrollLeft += e.deltaY;
+                  }
+                }}
+              >
+                {isData ? (
+                  <DataToolbar language={language} onAction={onDataAction} />
+                ) : (
+                  <FormatToolbar
+                    onFormat={onFormat}
+                    modKey={modKey}
+                    activeFormats={activeFormats}
+                  />
+                )}
+              </div>
+              <select
+                className={languageSelect}
+                aria-label="Document language"
+                title="Document language"
+                value={language}
+                onChange={(e) =>
+                  onLanguageChange(e.target.value as DocumentLanguage)
+                }
+              >
+                {DOCUMENT_LANGUAGES.map((option) => (
+                  <option key={option} className={languageOption} value={option}>
+                    {LANGUAGE_LABELS[option]}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div className="flex-1 min-h-0">
-            <Preview
-              ref={previewRef}
-              markdown={text}
-              theme={theme}
-              onScroll={handlePreviewScroll}
+          <div className="flex-1 min-h-0 px-4 py-2">
+            <Editor
+              ref={editorRef}
+              value={text}
+              language={language}
+              onChange={onTextChange}
+              onActiveFormatsChange={setActiveFormats}
+              onDataActionResult={onDataActionResult}
+              searchQuery={searchOpen ? searchQuery : ""}
+              onSearchResultChange={
+                searchOpen ? onSearchResultChange : undefined
+              }
+              onScroll={handleEditorScroll}
             />
           </div>
         </section>
-      )}
+        {previewMounted && (
+          <section className={`${pane}${previewDivider}`} aria-label="Preview">
+            <div className={paneHeader}>
+              <span className={paneLabel}>Preview</span>
+            </div>
+            <div className="flex-1 min-h-0">
+              <Preview
+                ref={previewRef}
+                markdown={text}
+                theme={theme}
+                onScroll={handlePreviewScroll}
+              />
+            </div>
+          </section>
+        )}
+      </div>
     </div>
   );
 }
