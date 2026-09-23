@@ -41,7 +41,7 @@
     "@tauri-apps/plugin-opener": "^2",
     "@viz-js/viz": "^3.30.0",
     "codemirror": "^6.0.2",
-    "dompurify": "^3.4.14",
+    "dompurify": "^3.4.15",
     "markdown-it": "^15.0.0",
     "markdown-it-anchor": "^10.0.0",
     "mermaid": "^11.16.1",
