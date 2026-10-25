@@ -39,7 +39,8 @@ fn classify(url: &Url, dev_url: Option<&Url>) -> Destination {
         // markpad is a single page. Any other path on its origin is a relative
         // link (`other.md`) resolved against the app instead of the document,
         // and would show the app's fallback page or a raw file — not markpad.
-        return if matches!(url.path(), "/" | "/index.html") {
+        // `tauri://localhost` (how Tauri loads index.html) has an empty path.
+        return if matches!(url.path(), "" | "/" | "/index.html") {
             Destination::App
         } else {
             Destination::Blocked
@@ -110,6 +111,9 @@ mod tests {
 
     #[test]
     fn app_frontend_stays_in_the_window() {
+        // Tauri loads `tauri://localhost` with no trailing slash, and `tauri:` is
+        // not a special scheme, so its path is "" rather than "/".
+        assert_eq!(classify(&url("tauri://localhost"), None), Destination::App);
         assert_eq!(classify(&url("tauri://localhost/"), None), Destination::App);
         assert_eq!(
             classify(&url("http://tauri.localhost/index.html"), None),
