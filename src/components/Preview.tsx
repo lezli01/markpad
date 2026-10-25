@@ -6,7 +6,9 @@ import {
   useMemo,
   useRef,
 } from "react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { headingSlug, renderMarkdown } from "../lib/markdown";
+import { findLink, resolveLinkAction } from "../lib/previewLinks";
 import {
   findDiagramSlots,
   paintDiagram,
@@ -33,6 +35,11 @@ type PreviewProps = {
   markdown: string;
   /** Drives the colours of rendered diagrams; the rest of the pane uses CSS. */
   theme: Theme;
+  /** The file being previewed, which relative links resolve against; null
+      for an untitled document. */
+  documentPath: string | null;
+  /** Open another markpad document a link in the preview points to. */
+  onOpenDocument: (path: string) => void;
   /** Fired on every scroll of the preview, user-driven or programmatic. */
   onScroll?: () => void;
 };
@@ -44,30 +51,45 @@ type PreviewProps = {
 const NEW_DIAGRAM_DELAY_MS = 180;
 
 const Preview = forwardRef<PreviewHandle, PreviewProps>(function Preview(
-  { markdown, theme, onScroll },
+  { markdown, theme, documentPath, onOpenDocument, onScroll },
   ref,
 ) {
   const html = useMemo(() => renderMarkdown(markdown), [markdown]);
   const divRef = useRef<HTMLDivElement>(null);
 
-  // Intercept clicks on in-document anchors (e.g. a table of contents linking to
-  // `#some-heading`) and smooth-scroll to the target *within* the preview's own
-  // scroll container, rather than letting the click mutate the app's URL hash.
+  // The preview never navigates the app's window: in-document anchors (e.g. a
+  // table of contents linking to `#some-heading`) smooth-scroll *within* the
+  // preview's own scroll container, web links open in the system browser, and
+  // links to other documents open them in markpad, and anything else (an
+  // image, a PDF, `javascript:` …) does nothing.
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
-      const link = (event.target as HTMLElement).closest("a");
-      const href = link?.getAttribute("href");
-      if (!href || !href.startsWith("#")) return; // leave external links alone
-      // This is an in-document anchor: we own the scrolling, so never let the
-      // click fall through to default fragment navigation (even if the target
-      // is missing) which would mutate the app URL hash.
+      // auxclick also fires for the right button; only a middle-click is a
+      // link activation (one that would otherwise open a new window).
+      if (event.type === "auxclick" && event.button !== 1) return;
+      const href = findLink(event.target);
+      if (href === null) return;
+      // We own every link outcome, so never let the click fall through to the
+      // webview's default navigation (even if the anchor target is missing).
       event.preventDefault();
+      const action = resolveLinkAction(href, documentPath);
+      if (action.kind === "external") {
+        void openUrl(action.url).catch((error: unknown) => {
+          console.error(`Failed to open ${action.url}:`, error);
+        });
+        return;
+      }
+      if (action.kind === "document") {
+        onOpenDocument(action.path);
+        return;
+      }
+      if (action.kind !== "anchor") return;
       const container = divRef.current;
       if (!container) return;
       // Resolve the fragment through the same slugify the heading ids use, so a
       // hand-written link matches its heading despite punctuation/encoding
       // differences (see headingSlug). Decode any %-escapes markdown-it added.
-      let fragment = href.slice(1);
+      let fragment = action.fragment;
       try {
         fragment = decodeURIComponent(fragment);
       } catch {
@@ -78,6 +100,13 @@ const Preview = forwardRef<PreviewHandle, PreviewProps>(function Preview(
       const target = container.querySelector(`[id="${CSS.escape(id)}"]`);
       target?.scrollIntoView({ behavior: "smooth", block: "start" });
     },
+    [documentPath, onOpenDocument],
+  );
+
+  // A `<form>` in the document's raw HTML would otherwise submit by navigating
+  // the app's window to its action.
+  const handleSubmit = useCallback(
+    (event: React.FormEvent<HTMLDivElement>) => event.preventDefault(),
     [],
   );
 
@@ -218,6 +247,8 @@ const Preview = forwardRef<PreviewHandle, PreviewProps>(function Preview(
     <div
       ref={divRef}
       onClick={handleClick}
+      onAuxClick={handleClick}
+      onSubmit={handleSubmit}
       onScroll={onScroll}
       className="markpad-preview h-full overflow-auto p-4"
       dangerouslySetInnerHTML={{ __html: html }}
