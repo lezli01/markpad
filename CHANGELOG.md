@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.14.1](https://github.com/lezli01/markpad/compare/v0.14.0...v0.14.1) (2026-10-25)
+
+
+### Bug Fixes
+
+* **navigation:** let the bundled app load in release builds ([ebd2650](https://github.com/lezli01/markpad/commit/ebd26507fcf16bcbf5e50ade8344466505886791))
+* **navigation:** let the bundled app load in release builds ([586769e](https://github.com/lezli01/markpad/commit/586769e8f6c3029a3b37087ea0019f85e250fab3))
+
 ## [0.14.0](https://github.com/lezli01/markpad/compare/v0.13.0...v0.14.0) (2026-10-25)
 
 
