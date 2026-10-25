@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { headingSlug, renderMarkdown } from "./markdown";
+import { headingSlug, markdownHeadings, renderMarkdown } from "./markdown";
 
 // Runs under jsdom (see vitest.config.ts) so DOMPurify has a window.
 describe("renderMarkdown — heading anchors", () => {
@@ -240,5 +240,42 @@ describe("renderMarkdown — source line anchors", () => {
       0,
     );
     expect(container.querySelectorAll("code[data-source-line]").length).toBe(0);
+  });
+});
+
+describe("markdownHeadings", () => {
+  it("lists ATX and setext headings with their level and source line", () => {
+    const source = [
+      "# Title", //               1
+      "",
+      "Intro text.",
+      "",
+      "## Install", //            5
+      "",
+      "Usage", //                 7
+      "-----",
+      "",
+      "###### Deep", //          10
+    ].join("\n");
+    expect(markdownHeadings(source)).toEqual([
+      { level: 1, text: "Title", line: 1 },
+      { level: 2, text: "Install", line: 5 },
+      { level: 2, text: "Usage", line: 7 },
+      { level: 6, text: "Deep", line: 10 },
+    ]);
+  });
+
+  it("ignores # lines inside code blocks and empty headings", () => {
+    const source = "```sh\n# not a heading\n```\n\n#\n\n    # indented code\n\n## Real";
+    expect(markdownHeadings(source)).toEqual([
+      { level: 2, text: "Real", line: 9 },
+    ]);
+  });
+
+  it("reduces inline formatting to the text the preview shows", () => {
+    const [heading] = markdownHeadings(
+      "## **Bold** `code` [link](https://example.com) ![alt](x.png)",
+    );
+    expect(heading.text).toBe("Bold code link alt");
   });
 });
