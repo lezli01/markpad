@@ -22,6 +22,9 @@ import type { SearchStatus } from "../lib/documentSearch";
 
 type WorkspaceProps = {
   text: string;
+  /** Path of the open file, or null when untitled (see Preview). */
+  documentPath: string | null;
+  onOpenDocument: (path: string) => void;
   language: DocumentLanguage;
   viewMode: ViewMode;
   /** Passed through to the preview, which draws diagrams in the theme's colours. */
@@ -75,6 +78,8 @@ const languageOption = "bg-[color:var(--bg)] text-[color:var(--text)]";
 type SyncSource = "editor" | "preview";
 
 export default function Workspace({
+  documentPath,
+  onOpenDocument,
   text,
   language,
   viewMode,
@@ -262,6 +267,8 @@ export default function Workspace({
                 ref={previewRef}
                 markdown={text}
                 theme={theme}
+                documentPath={documentPath}
+                onOpenDocument={onOpenDocument}
                 onScroll={handlePreviewScroll}
               />
             </div>

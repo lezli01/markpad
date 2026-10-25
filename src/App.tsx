@@ -847,6 +847,21 @@ function App() {
     return lastId;
   }
 
+  // A link in the preview to another document. Checked first so a broken link
+  // reports itself instead of leaving an unreadable item in the recents list.
+  async function openLinkedDocument(path: string) {
+    const stat = await statTextFile(path);
+    if (stat.kind === "missing") {
+      setError(`Could not open ${basename(path)}: the linked file does not exist.`);
+      return;
+    }
+    if (stat.kind === "error") {
+      setError(`Could not open ${basename(path)}: ${stat.message}`);
+      return;
+    }
+    await openPaths([path]);
+  }
+
   // Evict the least-recently-used clean files when over the cap. Modified items,
   // the freshly added item, and the active item are protected.
   function capList(
@@ -1444,6 +1459,8 @@ function App() {
           ) : (
             <Workspace
               text={activeText}
+              documentPath={activeItem.path}
+              onOpenDocument={(path) => void openLinkedDocument(path)}
               language={activeLanguage}
               viewMode={viewMode}
               theme={theme}
