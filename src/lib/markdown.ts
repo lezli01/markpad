@@ -130,3 +130,53 @@ export function renderMarkdown(source: string): string {
     ],
   });
 }
+
+export type Heading = {
+  /** 1–6, from `#` to `######` (setext `===` is 1, `---` is 2). */
+  level: number;
+  /** The heading's plain text, as the preview shows it. */
+  text: string;
+  /** 1-based source line the heading starts on. */
+  line: number;
+};
+
+type InlineToken = ReturnType<typeof md.parseInline>[number];
+
+function plainText(children: InlineToken[] | null): string {
+  let text = "";
+  for (const child of children ?? []) {
+    if (child.type === "text" || child.type === "code_inline") {
+      text += child.content;
+    } else if (child.type === "softbreak" || child.type === "hardbreak") {
+      text += " ";
+    } else if (child.type === "image") {
+      text += plainText(child.children); // its alt text
+    }
+  }
+  return text;
+}
+
+/**
+ * Every heading in the document, in order, for the outline panel. Parsed with
+ * the preview's own markdown-it instance, so it lists exactly the headings the
+ * preview renders: a `#` inside a code block is not one, and setext headings
+ * are.
+ */
+export function markdownHeadings(source: string): Heading[] {
+  const tokens = md.parse(source, {});
+  const headings: Heading[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (token.type !== "heading_open" || !token.map) continue;
+    const text = plainText(tokens[i + 1]?.children ?? null)
+      .replace(/\s+/g, " ")
+      .trim();
+    if (text === "") continue;
+    headings.push({
+      level: Number(token.tag.slice(1)),
+      text,
+      line: token.map[0] + 1,
+    });
+  }
+  return headings;
+}

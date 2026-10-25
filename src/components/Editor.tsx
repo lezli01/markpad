@@ -62,7 +62,10 @@ export type EditorHandle = {
   clearSearch(): void;
   getSelectedText(): string;
   focus(): void;
-  revealLine(lineNumber: number): void;
+  /** Put the caret at the start of a line and scroll it into view: centred
+      by default, or at the top for `"start"` (a heading jumped to from the
+      outline, so its section reads downward from there). */
+  revealLine(lineNumber: number, align?: "center" | "start"): void;
   getScrollTop(): number;
   /** Source line shown at the top of the viewport, or null before mount. */
   getSyncLine(): number | null;
@@ -430,7 +433,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         return view.state.sliceDoc(from, to);
       },
       focus: () => viewRef.current?.focus(),
-      revealLine: (lineNumber) => {
+      revealLine: (lineNumber, align = "center") => {
         const view = viewRef.current;
         if (!view) return;
         const line = view.state.doc.line(
@@ -438,7 +441,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         );
         view.dispatch({
           selection: { anchor: line.from },
-          effects: EditorView.scrollIntoView(line.from, { y: "center" }),
+          effects: EditorView.scrollIntoView(line.from, { y: align }),
         });
         view.focus();
       },

@@ -12,6 +12,8 @@ import ErrorBanner from "./components/ErrorBanner";
 import ExternalChangeBanner from "./components/ExternalChangeBanner";
 import RecentsPanel, { type RecentEntry } from "./components/RecentsPanel";
 import WorkspaceSearchPanel from "./components/WorkspaceSearchPanel";
+import OutlinePanel from "./components/OutlinePanel";
+import { markdownHeadings } from "./lib/markdown";
 import ConfirmDialog from "./components/ConfirmDialog";
 import type { EditorHandle } from "./components/Editor";
 import type { PreviewHandle } from "./components/Preview";
@@ -111,7 +113,7 @@ type ItemSnapshot = {
   previewScrollTop: number;
 };
 
-type SidebarView = "recents" | "workspaceSearch";
+type SidebarView = "recents" | "workspaceSearch" | "outline";
 
 type PendingLocation = {
   itemId: ItemId;
@@ -276,6 +278,13 @@ function App() {
   const searchOpen = activeId !== null && searchItemId === activeId;
   const workspaceSearchOpen =
     !sidebarCollapsed && sidebarView === "workspaceSearch";
+  const outlineOpen = !sidebarCollapsed && sidebarView === "outline";
+  const activeIsMarkdown = activeItem !== null && activeLanguage === "markdown";
+  // Parsed only while the outline is on screen; it follows every keystroke.
+  const outlineHeadings = useMemo(
+    () => (outlineOpen && activeIsMarkdown ? markdownHeadings(activeText) : []),
+    [outlineOpen, activeIsMarkdown, activeText],
+  );
 
   const recentEntries = useMemo<RecentEntry[]>(
     () =>
@@ -1115,6 +1124,29 @@ function App() {
     setSidebarView("recents");
   }
 
+  function handleToggleOutline() {
+    if (outlineOpen) {
+      setSidebarView("recents");
+      return;
+    }
+    setSidebarView("outline");
+    if (sidebarCollapsed) {
+      setSidebarCollapsed(false);
+      persistSidebarCollapsed(false);
+    }
+  }
+
+  // Jump to a heading picked in the outline, placing it at the top of the view
+  // so its section reads downward. In split view the preview follows the
+  // editor through scroll sync.
+  function handleOutlineSelect(line: number) {
+    if (viewMode === "preview") {
+      previewRef.current?.scrollToSyncLine(line);
+    } else {
+      editorRef.current?.revealLine(line, "start");
+    }
+  }
+
   async function handleChooseWorkspaceRoot() {
     const result = await openWorkspaceFolder();
     if (result.kind === "cancelled") return;
@@ -1283,6 +1315,7 @@ function App() {
   const handleToggleSidebarRef = useRef(handleToggleSidebar);
   const handleOpenSearchRef = useRef(handleOpenSearch);
   const handleOpenWorkspaceSearchRef = useRef(handleOpenWorkspaceSearch);
+  const handleToggleOutlineRef = useRef(handleToggleOutline);
   const handleCloseSearchRef = useRef(handleCloseSearch);
   const checkAgainstDiskRef = useRef(checkOpenFilesAgainstDisk);
 
@@ -1293,6 +1326,7 @@ function App() {
     handleToggleSidebarRef.current = handleToggleSidebar;
     handleOpenSearchRef.current = handleOpenSearch;
     handleOpenWorkspaceSearchRef.current = handleOpenWorkspaceSearch;
+    handleToggleOutlineRef.current = handleToggleOutline;
     handleCloseSearchRef.current = handleCloseSearch;
     checkAgainstDiskRef.current = checkOpenFilesAgainstDisk;
   });
@@ -1331,6 +1365,12 @@ function App() {
         return;
       }
       const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.shiftKey && !e.altKey && e.key.toLowerCase() === "o") {
+        e.preventDefault();
+        e.stopPropagation();
+        handleToggleOutlineRef.current();
+        return;
+      }
       if (!mod || e.shiftKey || e.altKey) return;
       const key = e.key.toLowerCase();
       if (key === "s") {
@@ -1388,6 +1428,14 @@ function App() {
                 onRemove={handleRemove}
                 onRemoveMany={handleRemoveMany}
               />
+            ) : sidebarView === "outline" ? (
+              <OutlinePanel
+                fileName={activeItem?.name ?? null}
+                isMarkdown={activeIsMarkdown}
+                headings={outlineHeadings}
+                onSelect={handleOutlineSelect}
+                onClose={() => setSidebarView("recents")}
+              />
             ) : (
               <WorkspaceSearchPanel
                 scope={workspaceSearchScope}
@@ -1430,6 +1478,7 @@ function App() {
           sidebarCollapsed={sidebarCollapsed}
           searchEnabled={activeItem !== null}
           workspaceSearchOpen={workspaceSearchOpen}
+          outlineOpen={outlineOpen}
           modKey={modKey}
           onToggleSidebar={handleToggleSidebar}
           onNewFile={handleNewFile}
@@ -1437,6 +1486,7 @@ function App() {
           onSave={handleSave}
           onFind={handleOpenSearch}
           onSearchFiles={handleOpenWorkspaceSearch}
+          onToggleOutline={handleToggleOutline}
           onToggleAutoSave={handleToggleAutoSave}
           onSetViewMode={handleSetViewMode}
           onToggleTheme={handleToggleTheme}

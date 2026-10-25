@@ -12,6 +12,7 @@ type ToolbarProps = {
   sidebarCollapsed: boolean;
   searchEnabled: boolean;
   workspaceSearchOpen: boolean;
+  outlineOpen: boolean;
   modKey: string;
   onToggleSidebar: () => void;
   onNewFile: () => void;
@@ -19,6 +20,7 @@ type ToolbarProps = {
   onSave: () => void;
   onFind: () => void;
   onSearchFiles: () => void;
+  onToggleOutline: () => void;
   onToggleAutoSave: (next: boolean) => void;
   onSetViewMode: (mode: ViewMode) => void;
   onToggleTheme: () => void;
@@ -197,6 +199,24 @@ function SearchFilesIcon() {
   );
 }
 
+function OutlineIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 6h.01M8 6h12M7 12h.01M11 12h9M7 18h.01M11 18h9" />
+    </svg>
+  );
+}
+
 const segments: ReadonlyArray<{ mode: ViewMode; label: string }> = [
   { mode: "editor", label: "Editor" },
   { mode: "split", label: "Split" },
@@ -218,6 +238,7 @@ export default function Toolbar({
   sidebarCollapsed,
   searchEnabled,
   workspaceSearchOpen,
+  outlineOpen,
   modKey,
   onToggleSidebar,
   onNewFile,
@@ -225,6 +246,7 @@ export default function Toolbar({
   onSave,
   onFind,
   onSearchFiles,
+  onToggleOutline,
   onToggleAutoSave,
   onSetViewMode,
   onToggleTheme,
@@ -261,6 +283,21 @@ export default function Toolbar({
         onClick={onSearchFiles}
       >
         <SearchFilesIcon />
+      </button>
+      <button
+        type="button"
+        className={`${iconButton}${
+          outlineOpen
+            ? " bg-[color:var(--accent-soft)] text-[color:var(--accent)]"
+            : ""
+        }`}
+        aria-label={`Outline (${modKey}+Shift+O)`}
+        aria-keyshortcuts="Control+Shift+O Meta+Shift+O"
+        aria-pressed={outlineOpen}
+        title={`Outline (${modKey}+Shift+O)`}
+        onClick={onToggleOutline}
+      >
+        <OutlineIcon />
       </button>
       <button
         type="button"
