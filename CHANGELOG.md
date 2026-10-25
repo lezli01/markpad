@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.14.0](https://github.com/lezli01/markpad/compare/v0.13.0...v0.14.0) (2026-10-25)
+
+
+### Features
+
+* add document outline sidebar ([a6126af](https://github.com/lezli01/markpad/commit/a6126af9afc718bc6f6f78b72ede2e97c49b2efa))
+* add document outline sidebar ([70e0ead](https://github.com/lezli01/markpad/commit/70e0eadd708cdb24b47129c46a10e556ed186c51))
+* **preview:** open links in the browser or in markpad ([1e6dc60](https://github.com/lezli01/markpad/commit/1e6dc60eafc503fa823861798e2d1e8029c9d9b6))
+
+
+### Bug Fixes
+
+* open links in the browser or markpad, never inside the app window ([457a915](https://github.com/lezli01/markpad/commit/457a91552de7f6a3db7d70556a63433375be9ab5))
+* **security:** keep the main window on markpad itself ([08c0909](https://github.com/lezli01/markpad/commit/08c0909cae6d5457f374ef78dd6353b23db3dd45))
+
 ## [0.13.0](https://github.com/lezli01/markpad/compare/v0.12.0...v0.13.0) (2026-08-15)
 
 
