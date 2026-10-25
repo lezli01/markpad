@@ -1,4 +1,5 @@
 mod launch_files;
+mod navigation;
 mod session;
 mod workspace_search;
 
@@ -20,6 +21,7 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .manage(launch_files::LaunchFilesState::default())
         .setup(|app| {
+            navigation::create_main_window(app)?;
             launch_files::ingest_initial_args(app.handle().clone(), std::env::args().collect());
             Ok(())
         })
